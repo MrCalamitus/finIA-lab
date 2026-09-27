@@ -1,0 +1,25 @@
+# Material privado del instructor
+instructor/
+
+# Secretos y credenciales
+.env
+.env.*
+!.env.example
+auth_info*/
+
+# Datos locales
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# Dependencias y builds
+node_modules/
+.venv/
+__pycache__/
+dist/
+
+# Sistema
+.DS_Store
+Thumbs.db

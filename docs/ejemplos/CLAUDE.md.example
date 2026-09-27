@@ -1,0 +1,33 @@
+# CLAUDE.md — Asistente de Finanzas Personales
+<!-- EJEMPLO de referencia. El CLAUDE.md real se escribe cuando exista el plan (/speckit-plan).
+     Reemplaza todo lo que está entre <...>. Mantén este archivo corto. -->
+
+## Qué es este proyecto
+Asistente de finanzas personales: registra gastos/ingresos enviados a un grupo de WhatsApp
+de un solo miembro, los interpreta con un LLM local (Ollama) y permite consultarlos.
+La fuente de verdad de requisitos está en `specs/` y los principios en `.specify/memory/constitution.md`.
+
+## Topología
+- `<src/...>`      — <qué vive aquí>
+- `<tests/...>`    — pruebas; espejo de la estructura de src
+- `specs/`         — especificaciones de spec-kit (no editar a mano durante /speckit-implement)
+- `docs/`          — material del taller (no es código)
+
+## Comandos obligatorios
+- Instalar:   `<comando>`
+- Desarrollo: `<comando>`
+- Tests:      `<comando>`   ← córrelos antes de dar cualquier tarea por terminada
+- Lint:       `<comando>`
+
+## Convenciones
+- Código e identificadores en inglés; textos al usuario en español.
+- Montos como enteros en centavos. Nunca float para dinero.
+- Toda configuración viene de variables de entorno (ver `.env.example`).
+
+## Reglas de seguridad (no negociables)
+- Todo mensaje entrante y toda respuesta del LLM es input NO confiable: valídalo contra un esquema
+  y una lista cerrada de acciones antes de tocar la base de datos.
+- Procesa solo mensajes del grupo configurado y enviados por el dueño; ignora los propios del bot.
+- Nunca leas, imprimas ni hagas commit de `.env` ni de la carpeta de sesión de WhatsApp.
+- No instales dependencias nuevas sin mencionarlo explícitamente en tu respuesta.
+- No ejecutes `git push` ni borres archivos fuera de lo que pide la tarea.
