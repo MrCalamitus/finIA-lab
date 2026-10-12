@@ -17,6 +17,8 @@
       "Edit(./.env)",
       "Edit(./auth_info*/**)",
       "Bash(rm -rf *)",
+      "Bash(rm: *)",
+      "Bash(git rm:*)",
       "Bash(git push --force *)",
       "Bash(git reset --hard *)",
       "Bash(curl * | sh)",

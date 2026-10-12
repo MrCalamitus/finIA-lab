@@ -14,15 +14,23 @@ const SECRET_PATHS = [
   /(^|[\s\\/'"=(])auth_info\w*/,
 ];
 
+const CMD = String.raw`(?:^|[;&|\x60(\s])`;
+const END = String.raw`(?=\s|$)`;
+
 const DANGEROUS_COMMANDS = [
-  { re: /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r/i, why: "borrado recursivo forzado" },
-  { re: /Remove-Item\b.*-Recurse/i, why: "borrado recursivo (PowerShell)" },
+  // --- Cualquier borrado ---
+  { re: new RegExp(`${CMD}(rm|rmdir|unlink|shred|trash|del|erase|rd)${END}`, "i"), why: "borrado de archivos" },
+  { re: new RegExp(`${CMD}(Remove-Item|ri)${END}`, "i"), why: "borrado de archivos (PowerShell)" },
+  { re: /\bfind\b.*\s-(delete\b|exec\s+rm\b)/, why: "borrado con find" },
+  { re: /\bgit\s+(rm|clean)\b/, why: "borrado con git" },
+  { re: /\b(unlinkSync|rmSync|rmdirSync)\b|\bfs(\.promises)?\.(unlink|rm|rmdir)\b|\bos\.(remove|unlink|rmdir)\b|\bshutil\.rmtree\b/, why: "borrado desde código" },
+
+  // --- Lo que ya tenías ---
   { re: /\bgit\s+push\b.*(--force|-f\b)/, why: "push forzado" },
   { re: /\bgit\s+reset\s+--hard\b/, why: "reset destructivo" },
   { re: /\b(curl|wget|irm|iwr)\b.*\|\s*(sh|bash|iex)\b/i, why: "ejecutar scripts descargados" },
-  { re: /\bDROP\s+(TABLE|DATABASE)\b/i, why: "borrado de tablas" },
+  { re: /\b(DROP\s+(TABLE|DATABASE)|TRUNCATE\s+TABLE|DELETE\s+FROM)\b/i, why: "borrado de datos en BD" },
 ];
-
 function block(reason) {
   process.stderr.write(`Bloqueado por hook de seguridad: ${reason}. Propón una alternativa segura o pide confirmación al usuario.\n`);
   process.exit(2);
@@ -35,9 +43,8 @@ process.stdin.on("end", () => {
   try {
     event = JSON.parse(raw);
   } catch {
-    process.exit(0); // si no entendemos la entrada, no bloqueamos (las reglas deny siguen activas)
+    block("no se pudo leer la acción; se bloquea por seguridad");
   }
-
   const { tool_name: tool, tool_input: input = {} } = event;
 
   if (tool === "Bash" || tool === "PowerShell") {
