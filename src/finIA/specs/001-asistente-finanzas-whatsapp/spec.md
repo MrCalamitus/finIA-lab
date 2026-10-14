@@ -178,7 +178,8 @@ cifra con el cálculo hecho a mano.
 - **FR-005a**: Si un movimiento interpretado supera $50,000.00, el sistema NO DEBE guardarlo
   hasta que el dueño lo confirme. DEBE preguntar "¿Confirmas <tipo> de $X?" y guardarlo solo si la
   siguiente respuesta del dueño es una confirmación afirmativa ("sí"). Cualquier otra respuesta
-  descarta el movimiento pendiente sin guardarlo y el asistente lo avisa. Un movimiento pendiente
+  descarta el movimiento pendiente sin guardarlo y el asistente lo avisa; después, esa respuesta
+  se procesa como un mensaje nuevo (no se pierde). Un movimiento pendiente
   no cuenta en totales ni resúmenes. Si el mensaje trae varios movimientos y alguno supera el
   umbral, la confirmación aplica al mensaje completo (todo o nada, ver FR-002a).
 - **FR-006**: El sistema NO DEBE registrar dos veces un mismo mensaje. Reentregar un mensaje que
@@ -202,7 +203,9 @@ cifra con el cálculo hecho a mano.
 - **FR-011**: El dueño DEBE poder corregir el monto, la categoría o la fecha de un registro y
   DEBE poder borrarlo, desde el mismo grupo. El registro se identifica respondiendo (citando) el
   mensaje de confirmación del asistente; si la petición no cita ninguna confirmación, se aplica al
-  último registro vigente.
+  último registro vigente. Una corrección de monto a más de $50,000.00 NO DEBE aplicarse: el
+  asistente pide borrar el registro y volver a registrarlo, para que pase por la confirmación de
+  FR-005a.
 - **FR-012**: El sistema DEBE confirmar cada corrección o borrado mostrando qué cambió.
 
 **Seguridad y privacidad**
@@ -235,8 +238,8 @@ cifra con el cálculo hecho a mano.
 - **Movimiento**: un gasto o un ingreso. Tiene tipo, monto exacto en pesos mexicanos, categoría,
   fecha del movimiento, texto original del mensaje, referencia al mensaje que lo originó y
   referencia al mensaje de confirmación del asistente (para identificarlo al corregir o borrar).
-  Puede estar pendiente de confirmar (monto mayor a $50,000.00), vigente o borrado; solo los
-  vigentes cuentan en totales y resúmenes.
+  Puede estar pendiente de confirmar (monto mayor a $50,000.00), vigente, borrado o descartado
+  (pendiente que el dueño no confirmó); solo los vigentes cuentan en totales y resúmenes.
 - **Categoría**: etiqueta de una lista predefinida, separada para gastos e ingresos. Incluye
   "Otros".
 - **Mensaje procesado**: constancia de que un mensaje ya fue atendido y con qué resultado
@@ -248,7 +251,8 @@ cifra con el cálculo hecho a mano.
 ### Measurable Outcomes
 
 - **SC-001**: El dueño registra un movimiento con un solo mensaje y recibe la confirmación en
-  menos de 10 segundos.
+  menos de 10 segundos en el 95 % de los casos, medido sobre el conjunto de prueba de SC-002 con
+  el modelo del taller ya cargado en la máquina de referencia del taller.
 - **SC-002**: Al menos 9 de cada 10 mensajes de un conjunto de prueba de 30 gastos e ingresos
   típicos se registran con tipo, monto y categoría correctos sin necesidad de corrección.
 - **SC-003**: El 100 % de los totales consultados coincide al centavo con la suma de los

@@ -50,7 +50,7 @@ movimientos al año.
 
 | Principio | Cómo lo cumple el diseño | Pre | Post |
 |---|---|---|---|
-| I. Todo input es no confiable | Filtro de origen antes de todo; LLM con salida estructurada revalidada con zod; despachador con lista cerrada de 6 acciones; confirmaciones decididas por código; el esquema no permite "todos" ([interpretacion.md](contracts/interpretacion.md)) | ✅ | ✅ |
+| I. Todo input es no confiable | Cada mensaje de WhatsApp se valida con un esquema zod (`MensajeEntrante`) antes de llegar al manejador; filtro de origen antes de todo; LLM con salida estructurada revalidada con zod; despachador con lista cerrada de 6 acciones; confirmaciones decididas por código; el esquema no permite "todos" ([interpretacion.md](contracts/interpretacion.md)) | ✅ | ✅ |
 | II. El dinero es exacto y no se duplica | `monto_centavos INTEGER`; monto parseado en código desde texto; PK de `mensajes_procesados` + `UNIQUE (mensaje_origen_id, indice_en_mensaje)` en la misma transacción; todo fallo produce aviso ([data-model.md](data-model.md)) | ✅ | ✅ |
 | III. Los datos no salen de la máquina | Ollama local o red privada; la URL se valida al arrancar (solo loopback o RFC 1918); SQLite local; sin telemetría ([configuracion.md](contracts/configuracion.md)) | ✅ | ✅ |
 | IV. Ningún secreto en el repo | Config por variables de entorno; `.env.example` sin valores; `auth_info/`, `.env`, `data/` en `.gitignore` con prueba; logs sin credenciales; el hook del repo impide al agente leer `auth_info*` y `.env` | ✅ | ✅ |
