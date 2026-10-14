@@ -8,6 +8,16 @@
 
 **Input**: User description: "docs/proyecto/vision.md: un asistente que vive en un grupo de WhatsApp donde solo estás tú. Escribes como le escribirías a un amigo y el asistente entiende, registra y responde. Un modelo de lenguaje local interpreta el mensaje y los datos financieros no salen de la máquina."
 
+## Clarifications
+
+### Session 2026-10-13
+
+- Q: ¿Cómo indica el dueño cuál registro quiere corregir o borrar? → A: Respondiendo (citando) el mensaje de confirmación del asistente; si no cita ninguno, se aplica al último registro vigente.
+- Q: ¿Qué debe pasar con los mensajes que el dueño envió mientras el asistente estaba apagado? → A: Al volver a encender se procesan solo los de las últimas 24 horas; los más viejos se ignoran y se avisa al dueño cuántos fueron.
+- Q: ¿Dónde y cómo recibe el dueño el resumen financiero? → A: Como un mensaje de texto en el mismo grupo, con ingresos, gastos, balance y gasto por categoría; del mes actual por defecto o del periodo que pida.
+- Q: Cuando un mensaje trae dos o más movimientos, ¿qué debe hacer el asistente? → A: Registrar todos y confirmarlos juntos en una sola respuesta; si alguno no se entiende, no se guarda ninguno.
+- Q: ¿A partir de qué monto se considera "desproporcionado" un movimiento, y qué hace el asistente con él? → A: Si el monto supera $50,000.00, el asistente pregunta "¿Confirmas $X?" y solo con un "sí" lo guarda y lo usa en los totales.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Registrar un movimiento escribiendo como hablo (Priority: P1)
@@ -36,6 +46,15 @@ queda guardado una sola vez y que la respuesta muestra tipo, monto, categoría y
    muestra un ejemplo de cómo escribirlo.
 5. **Given** un mensaje ya registrado, **When** ese mismo mensaje se entrega otra vez al asistente,
    **Then** no se crea un segundo registro.
+6. **Given** el asistente activo, **When** el dueño escribe "gasté 50 en café y 200 en gasolina",
+   **Then** se guardan dos gastos ($50.00 y $200.00) y el asistente los confirma en una sola
+   respuesta.
+7. **Given** el asistente activo, **When** el dueño escribe un mensaje con dos movimientos y uno de
+   ellos no tiene monto reconocible, **Then** no se guarda ninguno y el asistente avisa cuál no
+   entendió.
+8. **Given** el asistente activo, **When** el dueño escribe "me pagaron 75,000 de bono", **Then**
+   no se guarda todavía y el asistente pregunta "¿Confirmas ingreso de $75,000.00?"; si el dueño
+   responde "sí", se guarda y se confirma; si responde otra cosa, no se guarda nada y se avisa.
 
 ---
 
@@ -83,12 +102,17 @@ nuevo valor; después borrarlo y comprobar que desaparece de los totales.
    contar en los totales y el asistente confirma qué borró.
 3. **Given** ningún registro que coincida con lo que el dueño pide corregir, **When** llega la
    petición, **Then** no se modifica nada y el asistente lo avisa.
+4. **Given** dos gastos registrados, **When** el dueño responde (cita) la confirmación del primero
+   pidiendo cambiar el monto, **Then** se corrige el primero y el segundo queda intacto.
+5. **Given** varios registros vigentes, **When** el dueño escribe "corrige el último a 150" sin
+   citar ningún mensaje, **Then** se corrige el registro vigente más reciente.
 
 ---
 
 ### User Story 4 - Ver un resumen más completo (Priority: P4)
 
-El dueño quiere una vista de sus finanzas más amplia que la respuesta a una sola pregunta.
+El dueño quiere una vista de sus finanzas más amplia que la respuesta a una sola pregunta. La
+recibe como un mensaje de texto en el mismo grupo.
 
 **Why this priority**: Aporta valor sobre las consultas puntuales, pero es la necesidad menos
 definida de la visión y la primera que se puede aplazar.
@@ -99,7 +123,10 @@ cifra con el cálculo hecho a mano.
 **Acceptance Scenarios**:
 
 1. **Given** movimientos registrados en el mes, **When** el dueño pide su resumen, **Then** recibe
-   ingresos totales, gastos totales, balance y gasto por categoría del periodo.
+   ingresos totales, gastos totales, balance y gasto por categoría del mes actual, en un mensaje
+   de texto en el mismo grupo.
+2. **Given** movimientos registrados en septiembre y octubre, **When** el dueño pide "resumen de
+   septiembre", **Then** el resumen solo incluye los movimientos de septiembre.
 
 ---
 
@@ -114,12 +141,19 @@ cifra con el cálculo hecho a mano.
 - Las respuestas del propio asistente llegan al grupo: no se procesan como mensajes nuevos.
 - Llega un mensaje de otro chat, de otro grupo o de alguien que no es el dueño: se ignora sin
   responder.
-- Un mensaje contiene dos movimientos ("gasté 50 en café y 200 en gasolina"): se registran ambos o
-  se pide al dueño que los envíe por separado; nunca se registra solo uno en silencio.
+- Un mensaje contiene dos o más movimientos ("gasté 50 en café y 200 en gasolina"): se registran
+  todos y se confirman juntos; si alguno no se entiende, no se guarda ninguno (todo o nada) y el
+  dueño recibe un aviso. Nunca se registra solo una parte en silencio.
+- El dueño cita una confirmación que agrupa varios movimientos para corregir o borrar: el cambio
+  se aplica solo si la petición deja claro a cuál se refiere (por monto o categoría); si no, no se
+  modifica nada y el asistente pide precisarlo.
 - El mensaje no es de finanzas ("hola", un sticker, una foto, un audio): no se guarda nada.
 - Montos con formatos distintos ("12,500", "12.5 mil", "$180", "180 pesos") y montos no válidos
-  (cero, negativos, desproporcionados).
-- El asistente estuvo apagado y hay mensajes pendientes de ese periodo.
+  (cero, negativos): los no válidos se rechazan sin guardar nada. Los mayores a $50,000.00
+  requieren confirmación explícita del dueño antes de guardarse (ver FR-005a).
+- El asistente estuvo apagado y hay mensajes pendientes de ese periodo: los de las últimas 24 horas
+  se procesan con su fecha de envío; los más viejos se ignoran y el dueño recibe un aviso con
+  cuántos fueron (ver FR-020).
 
 ## Requirements *(mandatory)*
 
@@ -130,14 +164,25 @@ cifra con el cálculo hecho a mano.
 - **FR-001**: El sistema DEBE interpretar mensajes en español escritos en lenguaje natural y
   extraer tipo (gasto o ingreso), monto, categoría y fecha.
 - **FR-002**: El sistema DEBE responder a cada registro con una confirmación que muestre tipo,
-  monto, categoría y fecha tal como quedaron guardados.
-- **FR-003**: El sistema DEBE usar la fecha de recepción del mensaje cuando el dueño no indique
+  monto, categoría y fecha tal como quedaron guardados. Si un mensaje origina varios movimientos,
+  se confirman todos en una sola respuesta.
+- **FR-002a**: Si un mensaje contiene varios movimientos, el sistema DEBE registrarlos todos o
+  ninguno: si alguno no supera la interpretación o la validación, NO DEBE guardar ninguno y DEBE
+  avisar al dueño cuál falló.
+- **FR-003**: El sistema DEBE usar la fecha de envío del mensaje cuando el dueño no indique
   otra, y DEBE entender fechas relativas como "ayer" o "el lunes".
 - **FR-004**: El sistema DEBE asignar cada movimiento a una categoría de una lista predefinida y
   usar "Otros" cuando ninguna aplique.
 - **FR-005**: El sistema DEBE guardar los montos de forma exacta, en pesos mexicanos, sin errores
   de redondeo.
-- **FR-006**: El sistema NO DEBE registrar dos veces un mismo mensaje.
+- **FR-005a**: Si un movimiento interpretado supera $50,000.00, el sistema NO DEBE guardarlo
+  hasta que el dueño lo confirme. DEBE preguntar "¿Confirmas <tipo> de $X?" y guardarlo solo si la
+  siguiente respuesta del dueño es una confirmación afirmativa ("sí"). Cualquier otra respuesta
+  descarta el movimiento pendiente sin guardarlo y el asistente lo avisa. Un movimiento pendiente
+  no cuenta en totales ni resúmenes. Si el mensaje trae varios movimientos y alguno supera el
+  umbral, la confirmación aplica al mensaje completo (todo o nada, ver FR-002a).
+- **FR-006**: El sistema NO DEBE registrar dos veces un mismo mensaje. Reentregar un mensaje que
+  originó varios movimientos no crea ningún movimiento adicional.
 - **FR-007**: Cuando no pueda interpretar un mensaje con certeza, el sistema NO DEBE guardar nada
   y DEBE avisar al dueño con un ejemplo de formato válido.
 
@@ -147,16 +192,17 @@ cifra con el cálculo hecho a mano.
   (hoy, esta semana, este mes, un mes concreto) y por categoría.
 - **FR-009**: Las respuestas a consultas DEBEN incluir el total y el número de movimientos, y
   DEBEN calcularse solo a partir de los registros guardados.
-- **FR-010**: El sistema DEBE ofrecer un resumen con ingresos, gastos, balance y gasto por
-  categoría. [NEEDS CLARIFICATION: dónde se ve el resumen y qué más incluye: ¿un mensaje más largo
-  en el mismo grupo, un archivo o una vista aparte?]
+- **FR-010**: El sistema DEBE ofrecer, como un mensaje de texto en el mismo grupo, un resumen con
+  ingresos totales, gastos totales, balance y gasto por categoría. El periodo por defecto es el
+  mes actual; el dueño puede pedir otro periodo de los admitidos en FR-008. No se generan archivos
+  ni vistas aparte.
 
 **Corrección**
 
 - **FR-011**: El dueño DEBE poder corregir el monto, la categoría o la fecha de un registro y
-  DEBE poder borrarlo, desde el mismo grupo. [NEEDS CLARIFICATION: cómo identifica el dueño el
-  registro a corregir: ¿solo el último, respondiendo al mensaje de confirmación o con un número
-  de folio?]
+  DEBE poder borrarlo, desde el mismo grupo. El registro se identifica respondiendo (citando) el
+  mensaje de confirmación del asistente; si la petición no cita ninguna confirmación, se aplica al
+  último registro vigente.
 - **FR-012**: El sistema DEBE confirmar cada corrección o borrado mostrando qué cambió.
 
 **Seguridad y privacidad**
@@ -165,7 +211,8 @@ cifra con el cálculo hecho a mano.
   dueño de la cuenta, e ignorar todo lo demás.
 - **FR-014**: El sistema NO DEBE procesar sus propias respuestas como mensajes nuevos.
 - **FR-015**: El sistema DEBE limitar lo que un mensaje puede provocar a una lista cerrada de
-  acciones: registrar, consultar, corregir, borrar un registro y pedir el resumen. Ningún texto
+  acciones: registrar, confirmar un registro pendiente, consultar, corregir, borrar un registro y
+  pedir el resumen. Ningún texto
   puede provocar otra acción.
 - **FR-016**: El sistema DEBE validar el resultado de la interpretación del lenguaje antes de
   guardar o modificar cualquier dato, y DEBE rechazarlo si no cumple el formato esperado.
@@ -178,19 +225,23 @@ cifra con el cálculo hecho a mano.
 
 - **FR-019**: Si la interpretación del lenguaje no está disponible, el sistema NO DEBE guardar
   nada y DEBE avisar al dueño.
-- **FR-020**: El sistema DEBE definir qué ocurre con los mensajes enviados mientras estaba
-  apagado. [NEEDS CLARIFICATION: ¿se procesan al volver a encender, se ignoran, o se procesan solo
-  los de un periodo reciente?]
+- **FR-020**: Al volver a encender, el sistema DEBE procesar los mensajes pendientes enviados en
+  las últimas 24 horas, en orden de llegada y usando su fecha de envío como fecha por defecto. Los
+  pendientes con más de 24 horas NO DEBEN procesarse, y el sistema DEBE avisar al dueño cuántos se
+  ignoraron.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Movimiento**: un gasto o un ingreso. Tiene tipo, monto exacto en pesos mexicanos, categoría,
-  fecha del movimiento, texto original del mensaje y referencia al mensaje que lo originó. Puede
-  estar vigente o borrado.
+  fecha del movimiento, texto original del mensaje, referencia al mensaje que lo originó y
+  referencia al mensaje de confirmación del asistente (para identificarlo al corregir o borrar).
+  Puede estar pendiente de confirmar (monto mayor a $50,000.00), vigente o borrado; solo los
+  vigentes cuentan en totales y resúmenes.
 - **Categoría**: etiqueta de una lista predefinida, separada para gastos e ingresos. Incluye
   "Otros".
 - **Mensaje procesado**: constancia de que un mensaje ya fue atendido y con qué resultado
-  (registrado, consulta, corrección, rechazado). Evita registros duplicados.
+  (registrado, consulta, corrección, rechazado). Evita registros duplicados. Un mensaje puede
+  originar uno o varios movimientos.
 
 ## Success Criteria *(mandatory)*
 
@@ -204,7 +255,8 @@ cifra con el cálculo hecho a mano.
   movimientos guardados.
 - **SC-004**: En un conjunto de prueba de 20 mensajes hostiles (órdenes, intentos de borrado
   masivo, datos malformados), ninguno modifica o borra registros fuera de las acciones permitidas.
-- **SC-005**: Entregar 100 veces un mismo mensaje produce exactamente un registro.
+- **SC-005**: Entregar 100 veces un mismo mensaje produce exactamente los movimientos que contiene
+  (uno por cada movimiento del mensaje), sin duplicados.
 - **SC-006**: Ningún dato financiero sale de la máquina del dueño o de su red local durante el
   uso normal.
 - **SC-007**: El asistente no responde a ninguno de sus propios mensajes en una sesión de 50
