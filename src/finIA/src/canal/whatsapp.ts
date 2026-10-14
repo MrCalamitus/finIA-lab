@@ -11,6 +11,8 @@ export interface OpcionesWhatsApp {
   logger: Logger;
   alMensaje?: (mensaje: MensajeEntrante) => void;
   alAbrir?: (socket: WASocket) => void;
+  /** La conexión terminó y no se reintentará (sesión cerrada o reemplazada por otra copia). */
+  alFinalizar?: (motivo: 'sesion_cerrada' | 'sesion_reemplazada') => void;
 }
 
 export interface CanalWhatsApp extends Canal {
@@ -75,6 +77,16 @@ export function crearCanalWhatsApp(opciones: OpcionesWhatsApp): CanalWhatsApp {
           logger.error('whatsapp_sesion_cerrada', {
             indicacion: 'La sesión se cerró desde el teléfono. Borra la carpeta de sesión y vuelve a vincular.',
           });
+          opciones.alFinalizar?.('sesion_cerrada');
+          return;
+        }
+        if (codigo === DisconnectReason.connectionReplaced) {
+          // Otra copia del asistente abrió la misma sesión. Reconectar haría que ambas se
+          // expulsen en bucle (y podrían responder dos veces): esta copia se detiene.
+          logger.error('whatsapp_sesion_reemplazada', {
+            indicacion: 'Otra copia del asistente está usando esta sesión. Deja solo una corriendo.',
+          });
+          opciones.alFinalizar?.('sesion_reemplazada');
           return;
         }
         if (cerrado) return;

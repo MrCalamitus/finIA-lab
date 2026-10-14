@@ -30,6 +30,16 @@ const canal = crearCanalWhatsApp({
   grupoJid: config.grupoJid,
   logger,
   alMensaje: (mensaje) => manejador?.recibir(mensaje),
+  alFinalizar: async (motivo) => {
+    await manejador?.ocioso();
+    db.close();
+    console.error(
+      motivo === 'sesion_reemplazada'
+        ? 'Otra copia del asistente está conectada con esta sesión. Me detengo; deja solo una corriendo.'
+        : 'La sesión de WhatsApp se cerró. Vuelve a vincular con: npm run grupos',
+    );
+    process.exit(1);
+  },
 });
 manejador = crearManejador({ repo, interprete, canal, grupoJid: config.grupoJid, logger });
 
