@@ -1,0 +1,42 @@
+{
+  "descripcion": "SC-002: 30 mensajes típicos. Fecha de referencia: martes 2026-10-13. Montos esperados en centavos.",
+  "fechaReferencia": "2026-10-13",
+  "mensajes": [
+    { "texto": "gasté 180 en tacos", "esperado": [{ "tipo": "gasto", "centavos": 18000, "categoria": "Comida", "fecha": "2026-10-13" }] },
+    { "texto": "me pagaron 12,500 de la quincena", "esperado": [{ "tipo": "ingreso", "centavos": 1250000, "categoria": "Salario", "fecha": "2026-10-13" }] },
+    { "texto": "ayer gasté 99.90 en el súper", "esperado": [{ "tipo": "gasto", "centavos": 9990, "categoria": "Comida", "fecha": "2026-10-12" }] },
+    { "texto": "uber al trabajo $85", "esperado": [{ "tipo": "gasto", "centavos": 8500, "categoria": "Transporte", "fecha": "2026-10-13" }] },
+    { "texto": "pagué la luz, 640 pesos", "esperado": [{ "tipo": "gasto", "centavos": 64000, "categoria": "Servicios", "fecha": "2026-10-13" }] },
+    { "texto": "renta del depa 6,500", "esperado": [{ "tipo": "gasto", "centavos": 650000, "categoria": "Hogar", "fecha": "2026-10-13" }] },
+    { "texto": "consulta con el dentista 900", "esperado": [{ "tipo": "gasto", "centavos": 90000, "categoria": "Salud", "fecha": "2026-10-13" }] },
+    { "texto": "compré un libro de cálculo en 450", "esperado": [{ "tipo": "gasto", "centavos": 45000, "categoria": "Educación", "fecha": "2026-10-13" }] },
+    { "texto": "cine con mi novia 320", "esperado": [{ "tipo": "gasto", "centavos": 32000, "categoria": "Entretenimiento", "fecha": "2026-10-13" }] },
+    { "texto": "unos tenis de 1,299.50", "esperado": [{ "tipo": "gasto", "centavos": 129950, "categoria": "Ropa", "fecha": "2026-10-13" }] },
+    { "texto": "gasté 50 en café y 200 en gasolina", "esperado": [
+      { "tipo": "gasto", "centavos": 5000, "categoria": "Comida", "fecha": "2026-10-13" },
+      { "tipo": "gasto", "centavos": 20000, "categoria": "Transporte", "fecha": "2026-10-13" }
+    ] },
+    { "texto": "el lunes gasté 75 en el metrobús", "esperado": [{ "tipo": "gasto", "centavos": 7500, "categoria": "Transporte", "fecha": "2026-10-12" }] },
+    { "texto": "me cayeron 3.5 mil de un proyecto freelance", "esperado": [{ "tipo": "ingreso", "centavos": 350000, "categoria": "Honorarios", "fecha": "2026-10-13" }] },
+    { "texto": "mi abuela me regaló 500", "esperado": [{ "tipo": "ingreso", "centavos": 50000, "categoria": "Regalo", "fecha": "2026-10-13" }] },
+    { "texto": "pagué una multa de tránsito de 1,200", "esperado": [{ "tipo": "gasto", "centavos": 120000, "categoria": "Otros", "fecha": "2026-10-13" }] },
+    { "texto": "doné 200 a la cruz roja", "esperado": [{ "tipo": "gasto", "centavos": 20000, "categoria": "Otros", "fecha": "2026-10-13" }] },
+    { "texto": "comida corrida 95", "esperado": [{ "tipo": "gasto", "centavos": 9500, "categoria": "Comida", "fecha": "2026-10-13" }] },
+    { "texto": "recargué 150 de saldo al cel", "esperado": [{ "tipo": "gasto", "centavos": 15000, "categoria": "Servicios", "fecha": "2026-10-13" }] },
+    { "texto": "medicinas en la farmacia $312.40", "esperado": [{ "tipo": "gasto", "centavos": 31240, "categoria": "Salud", "fecha": "2026-10-13" }] },
+    { "texto": "antier pagué el internet, 499", "esperado": [{ "tipo": "gasto", "centavos": 49900, "categoria": "Servicios", "fecha": "2026-10-11" }] },
+    { "texto": "me depositaron la quincena: 9,800", "esperado": [{ "tipo": "ingreso", "centavos": 980000, "categoria": "Salario", "fecha": "2026-10-13" }] },
+    { "texto": "gasolina 600", "esperado": [{ "tipo": "gasto", "centavos": 60000, "categoria": "Transporte", "fecha": "2026-10-13" }] },
+    { "texto": "spotify 129", "esperado": [{ "tipo": "gasto", "centavos": 12900, "categoria": "Entretenimiento", "fecha": "2026-10-13" }] },
+    { "texto": "colegiatura del mes 4,200", "esperado": [{ "tipo": "gasto", "centavos": 420000, "categoria": "Educación", "fecha": "2026-10-13" }] },
+    { "texto": "compré focos y un foco extra para la casa, 180", "esperado": [{ "tipo": "gasto", "centavos": 18000, "categoria": "Hogar", "fecha": "2026-10-13" }] },
+    { "texto": "me pagaron 2 mil por una asesoría", "esperado": [{ "tipo": "ingreso", "centavos": 200000, "categoria": "Honorarios", "fecha": "2026-10-13" }] },
+    { "texto": "una chamarra en 850 y unos calcetines en 120", "esperado": [
+      { "tipo": "gasto", "centavos": 85000, "categoria": "Ropa", "fecha": "2026-10-13" },
+      { "tipo": "gasto", "centavos": 12000, "categoria": "Ropa", "fecha": "2026-10-13" }
+    ] },
+    { "texto": "ayer en la noche unas chelas, 260", "esperado": [{ "tipo": "gasto", "centavos": 26000, "categoria": "Entretenimiento", "fecha": "2026-10-12" }] },
+    { "texto": "taxi de regreso 140 pesos", "esperado": [{ "tipo": "gasto", "centavos": 14000, "categoria": "Transporte", "fecha": "2026-10-13" }] },
+    { "texto": "le presté a mi primo y me regresó 300", "esperado": [{ "tipo": "ingreso", "centavos": 30000, "categoria": "Otros", "fecha": "2026-10-13" }] }
+  ]
+}
