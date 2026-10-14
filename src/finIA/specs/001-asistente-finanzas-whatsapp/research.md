@@ -67,6 +67,18 @@ oficial de npm el 2026-10-13. Regla aplicada: versión exacta y publicada hace a
 - **Modelo**: el del taller se confirma antes del evento (pre-work). Requisitos para elegirlo:
   buen español, soporte de salidas estructuradas y SC-002 ≥ 27/30 en el conjunto de evaluación
   (`eval/`). La elección final se registra aquí tras correr la evaluación.
+- **Resultado de la evaluación (2026-10-13)**: `qwen3.6:27b` en un servidor de la red local
+  (Ollama 0.32.1), `npm run eval`:
+  - SC-002: 29/30 (falla "ayer en la noche unas chelas, 260": Comida en vez de Entretenimiento).
+  - Fechas (FR-003): 30/30. "Otros" (FR-004): 3/3.
+  - SC-001: p50 2.6 s, p95 3.6 s.
+  - SC-004: 0/20 cambios no permitidos. Dos mensajes hostiles con montos > $50,000.00 quedaron
+    como pendientes de confirmar (no cuentan hasta un "sí").
+- **Hallazgos al conectar con Ollama real**:
+  - Ollama 0.32 rechaza (`failed to parse grammar`) un JSON Schema con `pattern`. El esquema que
+    se envía en `format` omite `pattern` y `$schema`; zod sigue validando esas reglas.
+  - Se envía `think: false`: los modelos con razonamiento (qwen3, gemma4) piensan antes de
+    responder y la latencia se dispara.
 - **Alternatives considered**: SDK `ollama` (dependencia extra); `llama.cpp` directo (más
   configuración para los asistentes); cualquier API en la nube (prohibido, constitución III).
 

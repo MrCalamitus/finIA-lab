@@ -194,7 +194,7 @@ cálculo a mano.
 - [X] T064 Ampliar `eval/correr.ts` con SC-004: pasar cada mensaje de `eval/hostiles.json` por el manejador con el intérprete real, una base temporal sembrada con 10 movimientos y el canal falso; contar los que modifican o borran más de lo permitido; imprimir "SC-004: N/20 con cambios no permitidos (meta 0)"
 - [X] T065 [P] Crear `README.md` en `src/finIA/` con requisitos, configuración (enlace a contracts/configuracion.md), `npm run grupos`, `npm start`, `npm test`, `npm run eval` y el aviso de Baileys no oficial del pre-work
 - [X] T066 Correr `npm run typecheck` y `npm test` y corregir hasta que todo pase
-- [ ] T067 Correr `npm run eval` con el modelo candidato y registrar en `specs/001-asistente-finanzas-whatsapp/research.md` (R5) el modelo elegido, resultado de SC-002, SC-004 y latencia p95 frente a SC-001 (meta p95 < 10 s); si no se cumple, probar otro modelo o enmendar spec y plan antes de seguir
+- [X] T067 Correr `npm run eval` con el modelo candidato y registrar en `specs/001-asistente-finanzas-whatsapp/research.md` (R5) el modelo elegido, resultado de SC-002, SC-004 y latencia p95 frente a SC-001 (meta p95 < 10 s); si no se cumple, probar otro modelo o enmendar spec y plan antes de seguir
 - [ ] T068 Ejecutar quickstart.md Q1–Q12 y la verificación de privacidad del paso 6 contra WhatsApp real; anotar en el PR el resultado de cada escenario
 
 ---

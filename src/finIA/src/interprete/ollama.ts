@@ -30,6 +30,9 @@ export function crearInterpreteOllama(opciones: OpcionesOllama): Interprete {
           body: JSON.stringify({
             model: opciones.modelo,
             stream: false,
+            // Modelos con razonamiento (qwen3, gemma4…): sin esto piensan antes de responder y
+            // la latencia supera la meta de SC-001.
+            think: false,
             keep_alive: '30m',
             format: jsonSchemaInterpretacion,
             options: { temperature: 0 },
@@ -39,7 +42,10 @@ export function crearInterpreteOllama(opciones: OpcionesOllama): Interprete {
             ],
           }),
         });
-        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+        if (!respuesta.ok) {
+          const detalle = (await respuesta.text().catch(() => '')).slice(0, 200);
+          throw new Error(`HTTP ${respuesta.status}${detalle ? `: ${detalle}` : ''}`);
+        }
         cuerpo = await respuesta.json();
       } catch (error) {
         throw new ErrorInterpreteNoDisponible(error instanceof Error ? error.message : 'error desconocido');

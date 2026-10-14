@@ -58,8 +58,9 @@ export async function evaluarTipicos(interprete: Interprete): Promise<boolean> {
     try {
       propuesta = await interprete.interpretar(caso.texto, referencia);
     } catch (error) {
-      propuesta = null;
+      tiempos.push(performance.now() - inicio);
       console.log(`  ✗ ${caso.texto}  (intérprete no disponible: ${(error as Error).message})`);
+      continue;
     }
     tiempos.push(performance.now() - inicio);
 

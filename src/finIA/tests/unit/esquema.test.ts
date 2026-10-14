@@ -48,6 +48,13 @@ for (const [nombre, valor] of Object.entries(invalidos)) {
   });
 }
 
+test('el JSON Schema para Ollama no lleva `pattern` (rompe su gramática) pero zod sí lo valida', () => {
+  const texto = JSON.stringify(jsonSchemaInterpretacion);
+  assert.ok(!texto.includes('"pattern"'));
+  assert.ok(!texto.includes('"$schema"'));
+  assert.equal(validarInterpretacion({ accion: 'registrar', movimientos: [{ ...movimiento, fecha: 'ayer' }] }).ok, false);
+});
+
 test('el JSON Schema prohíbe propiedades adicionales', () => {
   const schema = jsonSchemaInterpretacion as { additionalProperties?: unknown; properties?: Record<string, unknown> };
   assert.equal(schema.additionalProperties, false);

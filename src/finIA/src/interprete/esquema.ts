@@ -58,5 +58,18 @@ export function validarInterpretacion(valor: unknown): ResultadoValidacion {
   return resultado.success ? { ok: true, valor: resultado.data } : { ok: false };
 }
 
+/** Quita claves que la gramática de Ollama no soporta. Las mismas reglas se validan aquí con zod. */
+function paraOllama(valor: unknown): unknown {
+  if (Array.isArray(valor)) return valor.map(paraOllama);
+  if (!valor || typeof valor !== 'object') return valor;
+  const salida: Record<string, unknown> = {};
+  for (const [clave, v] of Object.entries(valor)) {
+    // `pattern` hace fallar a Ollama 0.32 ("failed to parse grammar"); `$schema` sobra.
+    if (clave === 'pattern' || clave === '$schema') continue;
+    salida[clave] = paraOllama(v);
+  }
+  return salida;
+}
+
 /** JSON Schema para el parámetro `format` de Ollama (las reglas por acción se validan aquí). */
-export const jsonSchemaInterpretacion = z.toJSONSchema(Base);
+export const jsonSchemaInterpretacion = paraOllama(z.toJSONSchema(Base)) as Record<string, unknown>;
