@@ -59,8 +59,23 @@ export interface LoggerBaileys {
 
 export function adaptadorBaileys(logger: Logger): LoggerBaileys {
   const minimo: NivelLog = ORDEN[logger.nivel] > ORDEN.warn ? logger.nivel : 'warn';
-  const texto = (objeto: unknown, mensaje?: string) =>
-    mensaje ?? (typeof objeto === 'string' ? objeto : objeto instanceof Error ? objeto.message : 'evento');
+  /** Solo el motivo del error (p. ej. "Bad MAC"); nunca el objeto, que puede traer llaves o JIDs. */
+  const motivo = (objeto: unknown): string | null => {
+    if (!objeto || typeof objeto !== 'object') return null;
+    for (const campo of ['err', 'error']) {
+      const valor = (objeto as Record<string, unknown>)[campo];
+      if (valor instanceof Error) return valor.message;
+      if (valor && typeof valor === 'object' && typeof (valor as { message?: unknown }).message === 'string') {
+        return (valor as { message: string }).message;
+      }
+    }
+    return null;
+  };
+  const texto = (objeto: unknown, mensaje?: string) => {
+    const base = mensaje ?? (typeof objeto === 'string' ? objeto : objeto instanceof Error ? objeto.message : 'evento');
+    const razon = motivo(objeto);
+    return razon && razon !== base ? `${base}: ${razon.slice(0, 200)}` : base;
+  };
   const adaptador: LoggerBaileys = {
     level: minimo,
     child: () => adaptador,

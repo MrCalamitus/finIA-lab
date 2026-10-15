@@ -22,7 +22,7 @@ test('escenario 1 (FR-001): el primer mensaje se procesa y después llega la bie
   assert.equal(registro, '✅ Registrado: gasto de *$180.00* · 🌮 Comida · hoy');
   assert.match(bienvenida!, /^👋 \*¡Hola! Vamos a configurar tu asistente\.\*/);
   assert.match(bienvenida!, PREGUNTA_1);
-  assert.match(bienvenida!, /Las predeterminadas son: 🌮 Comida, 🚌 Transporte, .*📦 Otros\./);
+  assert.match(bienvenida!, /Las predeterminadas son:\n🌮 Comida\n🚌 Transporte\n[\s\S]*\n📦 Otros\n/);
   assert.deepEqual(e.repo.espera(), { tipo: 'config_categorias_gasto', referencia: null });
 });
 
@@ -34,7 +34,7 @@ test('escenarios 2 y 4: "predeterminadas" y luego "5,000" guardan la configuraci
   assert.match(r2!, /Ahora: \*\$50,000\.00\*/);
   const [r3] = await e.escribir('5,000');
   assert.match(r3!, /^✅ \*Configuración guardada\*/);
-  assert.match(r3!, /• Umbral: \$50,000\.00 → \*\$5,000\.00\*/);
+  assert.match(r3!, /💰 Umbral: \$50,000\.00 → \*\$5,000\.00\*/);
   assert.equal(e.repo.umbralCentavos(), 500_000);
   assert.equal(e.repo.estadoConfiguracion(), 'completa');
   assert.equal(e.repo.espera(), null);
@@ -45,7 +45,7 @@ test('escenarios 3 y 5: categorías propias y umbral nuevo se usan al registrar'
   const e = crearEntorno({ programa });
   await e.escribir('configurar');
   const [r1] = await e.escribir('Comida, Transporte, Mascotas, Gimnasio');
-  assert.match(r1!, /✅ Categorías de gasto: .* → \*🌮 Comida, 🚌 Transporte, 🏷️ Mascotas, 🏷️ Gimnasio, 📦 Otros\*/);
+  assert.match(r1!, /^✅ \*Categorías de gasto\*\nAntes: Comida, Transporte, .*, Otros\nAhora:\n🌮 Comida\n🚌 Transporte\n🏷️ Mascotas\n🏷️ Gimnasio\n📦 Otros\n/);
   assert.deepEqual(activas(e, 'gasto'), ['Comida', 'Transporte', 'Mascotas', 'Gimnasio', 'Otros']);
   await e.escribir('5,000');
   const [pregunta] = await e.escribir('gasté 6,000 en el veterinario');
@@ -56,7 +56,7 @@ test('escenario 6: "configurar" muestra los valores actuales', async () => {
   const e = crearEntorno({ programa });
   const [r] = await e.escribir('Configurar.');
   assert.match(r!, PREGUNTA_1);
-  assert.match(r!, /Ahora: 🌮 Comida/);
+  assert.match(r!, /Ahora:\n🌮 Comida\n/);
   assert.doesNotMatch(r!, /👋/);
 });
 
@@ -64,9 +64,7 @@ test('escenario 7: "ver configuración" muestra categorías y umbral', async () 
   const e = crearEntorno({ programa });
   const [r] = await e.escribir('ver configuración');
   assert.match(r!, /^⚙️ \*Tu configuración\*/);
-  assert.match(r!, /• Gastos: 🌮 Comida, .*📦 Otros/);
-  assert.match(r!, /• Ingresos: 💼 Salario, 🧾 Honorarios, 🎁 Regalo, 📦 Otros/);
-  assert.match(r!, /• Confirmo arriba de \*\$50,000\.00\*/);
+  assert.match(r!, /\*Gastos\*\n🌮 Comida\n[\s\S]*📦 Otros\n\n\*Ingresos\*\n💼 Salario\n🧾 Honorarios\n🎁 Regalo\n📦 Otros\n\n💰 Confirmo arriba de \*\$50,000\.00\*$/);
   assert.equal(e.interprete.llamadas.length, 0);
 });
 
@@ -75,7 +73,7 @@ test('escenario 8: "configurar ingresos" cambia solo las de ingreso', async () =
   const [pregunta] = await e.escribir('configurar ingresos');
   assert.match(pregunta!, /⚙️ \*Categorías de ingreso\*/);
   const [r] = await e.escribir('Salario, Ventas, Renta');
-  assert.match(r!, /✅ Categorías de ingreso: Salario, Honorarios, Regalo, Otros → \*💼 Salario, 🏷️ Ventas, 🏷️ Renta, 📦 Otros\*/);
+  assert.equal(r, '✅ *Categorías de ingreso*\nAntes: Salario, Honorarios, Regalo, Otros\nAhora:\n💼 Salario\n🏷️ Ventas\n🏷️ Renta\n📦 Otros');
   assert.deepEqual(activas(e, 'ingreso'), ['Salario', 'Ventas', 'Renta', 'Otros']);
   assert.equal(activas(e, 'gasto').length, 9);
   assert.equal(e.repo.espera(), null);

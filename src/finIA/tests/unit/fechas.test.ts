@@ -83,3 +83,21 @@ test('leerFechaEscrita: sin fecha o fecha imposible → null', () => {
 test('leerFechaEscrita: dd/mm/aaaa tiene prioridad sobre las palabras', () => {
   assert.equal(leerFechaEscrita('ayer no, fue el 01/10/2026', hoy), '2026-10-01');
 });
+
+test('leerFechaEscrita entiende el mes con nombre ("9 de octubre", "9 oct", "9 de octubre de 2025")', () => {
+  assert.equal(leerFechaEscrita('9 de octubre', hoy), '2026-10-09');
+  assert.equal(leerFechaEscrita('fue el 9 de Octubre.', hoy), '2026-10-09');
+  assert.equal(leerFechaEscrita('9 oct', hoy), '2026-10-09');
+  assert.equal(leerFechaEscrita('1 de febrero', hoy), '2026-02-01');
+  assert.equal(leerFechaEscrita('3 de sept', hoy), '2026-09-03');
+  assert.equal(leerFechaEscrita('9 de octubre de 2025', hoy), '2025-10-09');
+  assert.equal(leerFechaEscrita('9 de octubre del 2025', hoy), '2025-10-09');
+  assert.equal(leerFechaEscrita('31 de febrero', hoy), null);
+  assert.equal(leerFechaEscrita('9 de marzipan', hoy), null);
+});
+
+test('una fecha sin año que caería en el futuro es del año anterior', () => {
+  assert.equal(leerFechaEscrita('25 de diciembre', hoy), '2025-12-25');
+  assert.equal(leerFechaEscrita('12/12', hoy), '2025-12-12');
+  assert.equal(leerFechaEscrita('13/10', hoy), '2026-10-13');
+});

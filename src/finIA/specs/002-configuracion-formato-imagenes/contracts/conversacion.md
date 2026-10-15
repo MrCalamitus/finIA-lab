@@ -56,7 +56,7 @@ hasta el ancho del nombre más largo; los montos, a la derecha.
 
 | Situación | Respuesta |
 |---|---|
-| Bienvenida + pregunta 1 | `👋 *¡Hola! Vamos a configurar tu asistente.*`<br>`⚙️ *1/2 · Categorías de gasto*`<br>`Las predeterminadas son: 🌮 Comida, 🚌 Transporte, …, 📦 Otros.`<br>`Responde *predeterminadas* o escribe las tuyas separadas por comas (máx. 15).` |
+| Bienvenida + pregunta 1 (listas: una categoría por renglón, formato del dueño del 2026-10-14) | `👋 *¡Hola! Vamos a configurar tu asistente.*`<br>`⚙️ *1/2 · Categorías de gasto*`<br>`Las predeterminadas son: 🌮 Comida, 🚌 Transporte, …, 📦 Otros.`<br>`Responde *predeterminadas* o escribe las tuyas separadas por comas (máx. 15).` |
 | Pregunta 2 | `⚙️ *2/2 · Monto de confirmación*`<br>`¿A partir de qué monto te pido confirmar antes de guardar? (entre $100 y $1,000,000). Ahora: *$50,000.00*` |
 | Configuración lista | `✅ *Configuración guardada*`<br>`• Gastos: 🌮 Comida, 🏷️ Mascotas, … 📦 Otros`<br>`• Ingresos: 💼 Salario, … 📦 Otros`<br>`• Confirmo arriba de *$5,000.00*` |
 | Cambio de un valor | `✅ Umbral: $50,000.00 → *$5,000.00*` (y análogo para listas: `antes → ahora`) |
@@ -70,9 +70,11 @@ hasta el ancho del nombre más largo; los montos, a la derecha.
 | Situación | Respuesta |
 |---|---|
 | Propuesta de ticket | ver abajo |
-| Ticket guardado | `✅ *Guardé el ticket de Super La Esquina* · 5 artículos · *$229.90* · 12/10/2026` |
+| Ticket guardado directo (cuadra, sin repetidos, bajo el umbral) | ver "Ticket guardado directo" abajo |
+| Ticket guardado tras confirmar | `✅ *Guardé el ticket de Super La Esquina* · 5 artículos · *$229.90* · 12/10/2026` |
 | Ticket descartado | `⚠️ No guardé el ticket de *$229.90* porque no lo confirmaste.` |
-| Falta la fecha | `🤔 No encontré la fecha del ticket. Envía otra foto donde se vea o escríbela, por ejemplo ```12/10/2026``` o ```ayer```.` |
+| Falta la fecha | `🤔 No encontré la fecha del ticket. Envía otra foto donde se vea o escríbela, por ejemplo ```12/10/2026```, ```9 de octubre``` o ```ayer```.` |
+| La respuesta no es una fecha | `⚠️ No entendí la fecha y descarté el ticket de *$1,402.73*. Envía la foto otra vez con la fecha escrita junto a ella, por ejemplo ```12/10/2026``` o ```9 de octubre```.` (y el mensaje sigue el flujo normal) |
 | Falta el total | `⚠️ No pude leer el *total* del ticket. Envía una foto más nítida donde se vea el total.` |
 | Suma no cuadra | `⚠️ Los artículos suman *$219.90* pero el total del ticket es *$229.90*. Envía una foto más nítida.` |
 | No es ticket | `⚠️ No encontré un ticket en la imagen. Si fue una compra, escríbela así: ```gasté 180 en tacos```` |
@@ -83,7 +85,18 @@ hasta el ancho del nombre más largo; los montos, a la derecha.
 | Ticket borrado | `🗑️ Borré el ticket del 12/10: 5 artículos por *$229.90*.` |
 | "borra el ticket" sin cita | `⚠️ Cita la confirmación del ticket que quieres borrar.` |
 
-### Propuesta de ticket
+### Ticket guardado directo
+
+````text
+✅ *Guardé el ticket de Super La Esquina* · ayer _(fecha del ticket)_
+1. Leche entera 1 l (2 x) · *$57.00* · 🌮 Comida
+…
+5. Huevo (12 piezas) · *$42.00* · 🌮 Comida
+✅ Suman *$229.90*, igual que el total del ticket.
+↩️ Si algo está mal, cita este mensaje y escribe *borra el ticket*.
+````
+
+### Propuesta de ticket (pendiente: posibles repetidos o total mayor al umbral)
 
 ````text
 🧾 *Ticket de Super La Esquina* · 12/10/2026 _(fecha del ticket)_
@@ -94,6 +107,7 @@ hasta el ancho del nombre más largo; los montos, a la derecha.
 5. Huevo (12 piezas) · *$42.00* · 🌮 Comida ⚠️ _posible repetido de: gasto del 12/10 "gasté 42 en huevo"_
 ✅ Suman *$229.90*, igual que el total del ticket.
 ℹ️ Ignoré los productos y montos del texto; solo uso los del ticket.
+
 Responde *sí* para guardar los 5 o *sin repetidos* para guardar 4.
 ````
 

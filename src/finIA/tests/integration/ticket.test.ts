@@ -22,10 +22,23 @@ const PROPUESTA = [
   '4. Detergente líquido (3 l) · *$79.90* · 🏠 Hogar · descuento *$10.00*',
   '5. Huevo (12 piezas) · *$42.00* · 🌮 Comida',
   '✅ Suman *$229.90*, igual que el total del ticket.',
+  '',
   'Responde *sí* para guardar los 5.',
 ].join('\n');
 
+/**
+* Entorno con monto de confirmación de $200: los tickets de estas pruebas lo superan y quedan
+ * pendientes (FR-019 b). El guardado directo se prueba aparte, con `conTicketDirecto`.
+ */
 function conTicket(salida: unknown = TICKET, programa: Record<string, unknown> = {}) {
+  const e = crearEntorno({ programa });
+  e.repo.fijarUmbral(20_000);
+  e.interprete.programarTicket(salida);
+  return e;
+}
+
+/** Entorno con el monto de confirmación predeterminado ($50,000): un ticket que cuadra se guarda directo. */
+function conTicketDirecto(salida: unknown = TICKET, programa: Record<string, unknown> = {}) {
   const e = crearEntorno({ programa });
   e.interprete.programarTicket(salida);
   return e;
@@ -36,7 +49,7 @@ const movimientos = (e: ReturnType<typeof crearEntorno>) =>
     'SELECT monto_centavos, categoria, fecha, origen, descripcion, cantidad, ticket_id, indice_en_mensaje, estado, confirmacion_msg_id FROM movimientos ORDER BY id',
   );
 
-test('escenario 1: una foto produce la propuesta y no guarda nada todavía', async () => {
+test('FR-019 b: con total mayor al umbral, una foto produce la propuesta y no guarda nada todavía', async () => {
   const e = conTicket();
   assert.deepEqual(await e.escribir(null, { foto: true }), [PROPUESTA]);
   assert.equal(movimientos(e).length, 0);
@@ -123,7 +136,7 @@ test('escenario 8: una salida ilegible del modelo sugiere escribir el gasto', as
 test('escenarios 9 y 10: sin fecha pide la fecha; "ayer" completa la propuesta', async () => {
   const e = conTicket({ ...TICKET, fecha: null });
   assert.deepEqual(await e.escribir(null, { foto: true }), [
-    '🤔 No encontré la fecha del ticket. Envía otra foto donde se vea o escríbela, por ejemplo ```12/10/2026``` o ```ayer```.',
+    '🤔 No encontré la fecha del ticket. Envía otra foto donde se vea o escríbela, por ejemplo ```12/10/2026```, ```9 de octubre``` o ```ayer```.',
   ]);
   assert.deepEqual(e.repo.espera(), { tipo: 'ticket_fecha', referencia: '1' });
   assert.deepEqual(e.filas('SELECT estado, fecha FROM tickets'), [{ estado: 'esperando_fecha', fecha: null }]);
@@ -151,7 +164,10 @@ test('FR-018c: sin fecha, un texto que no es fecha descarta el ticket y se proce
   const e = conTicket({ ...TICKET, fecha: null });
   await e.escribir(null, { foto: true });
   const respuestas = await e.escribir('hola');
-  assert.equal(respuestas[0], '⚠️ No guardé el ticket de *$229.90* porque no lo confirmaste.');
+  assert.equal(
+    respuestas[0],
+    '⚠️ No entendí la fecha y descarté el ticket de *$229.90*. Envía la foto otra vez con la fecha escrita junto a ella, por ejemplo ```12/10/2026``` o ```9 de octubre```.',
+  );
   assert.equal(respuestas.length, 2);
   assert.deepEqual(e.filas('SELECT estado FROM tickets'), [{ estado: 'descartado' }]);
 });
@@ -284,4 +300,86 @@ test('IVA y descuento a la vez aparecen en la misma línea', async () => {
   );
   const [propuesta] = await e.escribir(null, { foto: true });
   assert.match(propuesta!, /✅ Suman \*\$100\.00\* \+ IVA \*\$16\.00\* − descuento \*\$6\.00\* = \*\$110\.00\*, igual que el total del ticket\. Repartí el IVA y el descuento entre los artículos\./);
+});
+
+test('FR-018c: "9 de octubre" responde a la pregunta de la fecha', async () => {
+  const e = conTicket({ ...TICKET, fecha: null });
+  await e.escribir(null, { foto: true });
+  const [propuesta] = await e.escribir('9 de octubre');
+  assert.match(propuesta!, /^🧾 \*Ticket de Super La Esquina\* · 09\/10\/2026 _\(fecha que escribiste\)_/);
+  assert.equal(e.repo.espera()?.tipo, 'ticket_confirmacion');
+});
+
+test('FR-018c: "9 de octubre" escrito junto a la foto también sirve', async () => {
+  const e = conTicket({ ...TICKET, fecha: null });
+  const [propuesta] = await e.escribir('9 de octubre', { foto: true });
+  assert.match(propuesta!, /· 09\/10\/2026 _\(fecha que escribiste\)_/);
+});
+
+// --- FR-019 (enmienda): guardado directo cuando todo cuadra ---
+
+const GUARDADO = [
+  '✅ *Guardé el ticket de Super La Esquina* · ayer _(fecha del ticket)_',
+  '1. Leche entera 1 l (2 x) · *$57.00* · 🌮 Comida',
+  '2. Manzana gala (800 g) · *$36.00* · 🌮 Comida',
+  '3. Pan blanco (3 piezas) · *$15.00* · 🌮 Comida',
+  '4. Detergente líquido (3 l) · *$79.90* · 🏠 Hogar · descuento *$10.00*',
+  '5. Huevo (12 piezas) · *$42.00* · 🌮 Comida',
+  '✅ Suman *$229.90*, igual que el total del ticket.',
+  '↩️ Si algo está mal, cita este mensaje y escribe *borra el ticket*.',
+].join('\n');
+
+test('escenario 1: un ticket que cuadra se guarda sin pedir confirmación', async () => {
+  const e = conTicketDirecto();
+  assert.deepEqual(await e.escribir(null, { foto: true }), [GUARDADO]);
+  const filas = movimientos(e);
+  assert.equal(filas.length, 5);
+  assert.ok(filas.every((f) => f.estado === 'vigente' && f.origen === 'imagen' && f.confirmacion_msg_id === e.idUltimaRespuesta()));
+  assert.deepEqual(e.filas('SELECT estado, confirmacion_msg_id FROM tickets'), [{ estado: 'guardado', confirmacion_msg_id: e.idUltimaRespuesta() }]);
+  assert.equal(e.repo.espera(), null);
+  assert.deepEqual(e.filas(`SELECT resultado FROM mensajes_procesados`), [{ resultado: 'ticket_guardado' }]);
+});
+
+test('con la fecha pedida, al responderla se guarda directo', async () => {
+  const e = conTicketDirecto({ ...TICKET, fecha: null });
+  await e.escribir(null, { foto: true });
+  const [r] = await e.escribir('9 de octubre');
+  assert.match(r!, /^✅ \*Guardé el ticket de Super La Esquina\* · 09\/10\/2026 _\(fecha que escribiste\)_/);
+  assert.equal(movimientos(e).length, 5);
+  assert.equal(e.repo.espera(), null);
+});
+
+test('con posibles repetidos no se guarda directo: queda pendiente', async () => {
+  const e = conTicketDirecto();
+  await e.escribir(null, { foto: true });
+  const [propuesta] = await e.escribir(null, { foto: true });
+  assert.match(propuesta!, /^🧾/);
+  assert.match(propuesta!, /Todos parecen repetidos/);
+  assert.equal(movimientos(e).length, 5);
+  assert.equal(e.repo.espera()?.tipo, 'ticket_confirmacion');
+});
+
+test('con total mayor al umbral no se guarda directo: queda pendiente', async () => {
+  const e = conTicketDirecto(salidaTicket([['Pantalla', '60,000.00', 'Hogar']], '60,000.00'));
+  const [propuesta] = await e.escribir(null, { foto: true });
+  assert.match(propuesta!, /^🧾/);
+  assert.equal(movimientos(e).length, 0);
+});
+
+test('"borra el ticket" citando la respuesta de guardado directo lo deshace', async () => {
+  const e = conTicketDirecto();
+  await e.escribir(null, { foto: true });
+  const confirmacion = e.idUltimaRespuesta()!;
+  await e.escribir('borra el ticket', { citadoId: confirmacion });
+  await e.escribir('sí');
+  assert.equal(e.filas(`SELECT 1 FROM movimientos WHERE estado = 'vigente'`).length, 0);
+});
+
+test('el guardado directo incluye la línea de IVA cuando hubo cuadre', async () => {
+  const e = conTicketDirecto(
+    salidaTicket([['MAGNA', '259.64', 'Transporte', '12.51']], '300.00', { subtotal_texto: '259.64', impuesto_texto: '40.36' }),
+  );
+  const [r] = await e.escribir(null, { foto: true });
+  assert.match(r!, /✅ Suman \*\$259\.64\* \+ IVA \*\$40\.36\* = \*\$300\.00\*/);
+  assert.deepEqual(e.filas('SELECT monto_centavos FROM movimientos'), [{ monto_centavos: 30_000 }]);
 });

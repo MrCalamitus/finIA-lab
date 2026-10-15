@@ -15,8 +15,9 @@ Tres cambios sobre el asistente de la 001, sin dependencias nuevas:
    emojis por categoría, bloques monoespaciados para alinear), escapando los textos dinámicos.
 3. **Imágenes**: Baileys descarga la foto (JPEG/PNG ≤ 5 MB, verificada por bytes). El mismo Ollama
    local, con un modelo de visión, propone artículos y total. El código suma en centavos, exige que
-   cuadre al centavo, decide la fecha (escrita > ticket > preguntar), marca posibles repetidos y
-   pide una sola confirmación.
+   cuadre al centavo, decide la fecha (escrita > ticket > preguntar) y marca posibles repetidos.
+   Si cuadra, sin repetidos y por debajo del umbral, se guarda directo; si no, pide una sola
+   confirmación (FR-019, enmienda del 2026-10-14).
 
 Las cinco situaciones de "esperando respuesta" se unifican en una sola **espera activa**.
 

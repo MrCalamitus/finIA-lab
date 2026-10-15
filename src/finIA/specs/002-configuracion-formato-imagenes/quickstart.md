@@ -44,10 +44,10 @@ inicial.
 | C6 | `ver configuración` | categorías y umbral vigentes | FR-008 |
 | F1 | `gasté 180 en tacos` | `✅ Registrado: *$180.00* · 🌮 Comida · hoy` con negritas visibles | FR-011 |
 | F2 | `resumen` | montos alineados en bloque monoespaciado | FR-013 |
-| I1 | foto de un ticket | propuesta con artículos, cantidades y "Suman … igual que el total" | FR-018, FR-018a |
-| I2 | `sí` | "Guardé el ticket…"; `resumen` incluye los artículos | FR-019 |
+| I1 | foto de un ticket | "✅ Guardé el ticket…" con artículos, cantidades y "Suman … igual que el total", sin pedir confirmación | FR-018, FR-018a, FR-019 |
+| I2 | `resumen` | incluye los artículos del ticket | FR-019 |
 | I3 | misma foto otra vez | artículos marcados como posibles repetidos; `sin repetidos` no guarda nada | FR-018d |
-| I4 | foto sin fecha visible, luego `ayer` | pide la fecha; con `ayer` muestra la propuesta | FR-018c |
+| I4 | foto sin fecha visible, luego `9 de octubre` | pide la fecha; con la fecha guarda directo | FR-018c, FR-019 |
 | I5 | foto con texto `ayer gasté 50 en café` | fecha de ayer; aviso de que se ignoró el texto | FR-020 |
 | I6 | cita "Guardé el ticket…" y `borra el ticket`, luego `sí` | pregunta y borra todos sus artículos | FR-020a |
 | I7 | foto de un paisaje | "No encontré un ticket" | escenario 7 |

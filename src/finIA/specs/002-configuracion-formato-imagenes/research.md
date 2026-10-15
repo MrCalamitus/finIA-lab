@@ -54,13 +54,20 @@ TypeScript sobre Node 24, Baileys 7.0.0-rc14, zod 4.6.5, `node:sqlite`, Ollama p
   `Σ(importe − descuento) == total`, al centavo, con enteros. Cada artículo debe quedar > 0.
   Si cualquier conversión falla o la suma no cuadra → no hay propuesta (FR-018a).
 - **Rationale**: constitución II. Sustituye para imágenes la regla anti-alucinación de la 001
-  ("el monto debe aparecer en el texto"), que no aplica a una foto. Junto con la confirmación
-  obligatoria (FR-019), ningún número inventado llega a guardarse sin que el dueño lo vea.
+  ("el monto debe aparecer en el texto"), que no aplica a una foto. Un número mal leído casi nunca
+  deja una suma exacta al centavo, así que un ticket que cuadra se guarda directo (FR-019, enmienda
+  del 2026-10-14). La respuesta lista lo guardado y cómo deshacerlo ("borra el ticket"). Se sigue
+  pidiendo confirmación si hay posibles repetidos o si el total supera el monto de confirmación.
+- **Riesgo aceptado (enmienda)**: una imagen manipulada que cuadre se registra sin confirmación.
+  Mitigación: solo es la foto que el propio dueño envía, nunca borra ni modifica nada existente
+  (SC-006) y se deshace con un mensaje.
 
 ## R5. Fechas escritas por el dueño
 
 - **Decision**: parser determinista `leerFechaEscrita(texto, hoy)` que busca en el texto, en este
-  orden: `dd/mm/aaaa`, `dd/mm`, `antier`, `ayer`, `hoy` (sin distinguir mayúsculas ni acentos).
+  orden: `dd/mm/aaaa`, `d de <mes> [de aaaa]` (nombre o abreviatura: "9 de octubre", "9 oct"), `dd/mm`,
+  `antier`, `ayer`, `hoy` (sin distinguir mayúsculas ni acentos). Sin año, si cae en el futuro se
+  toma el año anterior. Añadido el 2026-10-14 tras un uso real: el dueño respondió "9 de octubre".
   El resultado se valida con `validarFecha` de la 001. Prioridad: fecha escrita > fecha del ticket
   (FR-018c). Nunca se usa la fecha de envío para un ticket.
 - **Rationale**: FR-006 y FR-018c piden reglas fijas; el modelo no decide la fecha escrita.
@@ -131,7 +138,7 @@ TypeScript sobre Node 24, Baileys 7.0.0-rc14, zod 4.6.5, `node:sqlite`, Ollama p
   propuesta (FR-018e).
 - **Rationale**: el modelo solo transcribe números impresos; el código decide y exige doble
   verificación (subtotal = suma y total exacto). Cada artículo queda con lo realmente pagado y en
-  su categoría. La confirmación de FR-019 sigue siendo obligatoria.
+  su categoría. Si cuadra, se guarda directo (FR-019) salvo repetidos o un total mayor al umbral.
 - **Evaluación con 10 tickets reales (2026-10-14, `qwen3.6:27b`)**: suma y fecha **9/10** (meta ≥ 8),
   artículos **7/10** (meta ≥ 7). El 9 (gasolina) cuadra con IVA y el 10 (Costco) con el descuento
   general repartido. Pendientes:

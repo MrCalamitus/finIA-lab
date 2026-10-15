@@ -13,6 +13,7 @@ import {
   borrarTicketSinCita,
   diaMes,
   faltaFecha,
+  fechaNoEntendida,
   faltaTotal,
   imagenNoValida,
   masDe40,
@@ -24,6 +25,7 @@ import {
   ticketBorrado,
   ticketDescartado,
   ticketGuardado,
+  ticketGuardadoDirecto,
   ticketIlegible,
   ticketNoBorrado,
   visionNoDisponible,
@@ -108,6 +110,28 @@ function vista(ticket: Ticket, propuesta: Propuesta): Parameters<typeof propuest
 
 const rechazoImagen = (respuesta: string): ResultadoAccion => ({ resultado: 'imagen_rechazada', respuesta });
 
+/** Guarda los artículos elegidos del ticket (todos o ninguno, en la transacción en curso). */
+function guardar(repo: Repositorio, ticket: Ticket, elegidos: Propuesta['articulos'], respuesta: string): ResultadoAccion {
+  const ids = repo.guardarArticulosTicket(ticket, elegidos);
+  repo.actualizarTicket(ticket.id, { estado: 'guardado' });
+  return { resultado: 'ticket_guardado', respuesta, confirmar: ids, confirmarTicket: ticket.id };
+}
+
+/**
+ * FR-019 (enmienda): con fecha conocida y la suma cuadrada, se guarda directo, salvo que haya
+ * posibles repetidos o que el total supere el monto de confirmación; en esos casos, propuesta
+ * pendiente de una sola confirmación.
+ */
+function proponerOGuardar(repo: Repositorio, ticket: Ticket, propuesta: Propuesta, ahora: Date): ResultadoAccion {
+  const hayRepetidos = propuesta.articulos.some((a) => a.repetidoDe !== null);
+  if (!hayRepetidos && ticket.total_centavos <= repo.umbralCentavos()) {
+    repo.cancelarEspera();
+    return guardar(repo, ticket, propuesta.articulos, ticketGuardadoDirecto(vista(ticket, propuesta), ahora));
+  }
+  repo.crearEspera('ticket_confirmacion', String(ticket.id));
+  return { resultado: 'ticket_propuesto', respuesta: propuestaTicket(vista(ticket, propuesta), ahora) };
+}
+
 export interface ContextoImagen {
   repo: Repositorio;
   interprete: Interprete;
@@ -173,9 +197,11 @@ export async function procesarImagen({ repo, interprete, mensaje, ahora }: Conte
       textoFoto: mensaje.texto?.slice(0, 500) ?? null,
       estado: fecha ? 'pendiente' : 'esperando_fecha',
     });
-    repo.crearEspera(fecha ? 'ticket_confirmacion' : 'ticket_fecha', String(id));
-    if (!fecha) return terminar({ resultado: 'ticket_esperando_fecha', respuesta: faltaFecha() });
-    return terminar({ resultado: 'ticket_propuesto', respuesta: propuestaTicket(vista(repo.ticket(id)!, propuesta), ahora) });
+    if (!fecha) {
+      repo.crearEspera('ticket_fecha', String(id));
+      return terminar({ resultado: 'ticket_esperando_fecha', respuesta: faltaFecha() });
+    }
+    return terminar(proponerOGuardar(repo, repo.ticket(id)!, propuesta, ahora));
   });
 }
 
@@ -184,10 +210,10 @@ const ticketDeEspera = (repo: Repositorio, referencia: string | null) => {
   return ticket ? { ticket, propuesta: leerPropuesta(ticket) } : null;
 };
 
-function descartar(repo: Repositorio, ticket: Ticket, avisar: boolean) {
+function descartar(repo: Repositorio, ticket: Ticket, aviso: string | null) {
   repo.actualizarTicket(ticket.id, { estado: 'descartado' });
   repo.cancelarEspera();
-  return { tipo: 'cancelada' as const, aviso: avisar ? ticketDescartado(ticket.total_centavos) : null };
+  return { tipo: 'cancelada' as const, aviso };
 }
 
 /** Espera `ticket_fecha`: una fecha escrita completa la propuesta; otra foto lo sustituye (FR-018c). */
@@ -199,10 +225,10 @@ const resolverFecha: ManejadorEspera = ({ repo, mensaje, ahora }, espera) => {
   }
   const { ticket, propuesta } = datos;
   // Otra foto: el ticket anterior se descarta sin aviso y la foto se procesa como ticket nuevo.
-  if (mensaje.imagen || mensaje.imagenRechazada) return descartar(repo, ticket, false);
+  if (mensaje.imagen || mensaje.imagenRechazada) return descartar(repo, ticket, null);
 
   const escrita = fechaEscritaConCoincidencia(mensaje.texto, mensaje.enviadoEn);
-  if (!escrita || !validarFecha(escrita.iso, mensaje.enviadoEn)) return descartar(repo, ticket, true);
+  if (!escrita || !validarFecha(escrita.iso, mensaje.enviadoEn)) return descartar(repo, ticket, fechaNoEntendida(ticket.total_centavos));
 
   const completa: Propuesta = {
     ...propuesta,
@@ -218,11 +244,7 @@ const resolverFecha: ManejadorEspera = ({ repo, mensaje, ahora }, espera) => {
     estado: 'pendiente',
     propuesta: JSON.stringify(completa),
   });
-  repo.crearEspera('ticket_confirmacion', String(ticket.id));
-  return {
-    tipo: 'resuelta',
-    resultado: { resultado: 'ticket_propuesto', respuesta: propuestaTicket(vista(repo.ticket(ticket.id)!, completa), ahora) },
-  };
+  return { tipo: 'resuelta', resultado: proponerOGuardar(repo, repo.ticket(ticket.id)!, completa, ahora) };
 };
 
 /** Espera `ticket_confirmacion`: "sí" guarda todo; "sin repetidos" omite los marcados (FR-019). */
@@ -234,12 +256,12 @@ const resolverConfirmacion: ManejadorEspera = ({ repo, mensaje, ahora }, espera)
   }
   const { ticket, propuesta } = datos;
   // Una foto nunca confirma, aunque su pie diga "sí".
-  if (mensaje.imagen || mensaje.imagenRechazada) return descartar(repo, ticket, true);
+  if (mensaje.imagen || mensaje.imagenRechazada) return descartar(repo, ticket, ticketDescartado(ticket.total_centavos));
 
   const hayRepetidos = propuesta.articulos.some((a) => a.repetidoDe !== null);
   const todo = esAfirmativo(mensaje.texto);
   const sinRepetidos = hayRepetidos && normalizarComando(mensaje.texto) === 'sin repetidos';
-  if (!todo && !sinRepetidos) return descartar(repo, ticket, true);
+  if (!todo && !sinRepetidos) return descartar(repo, ticket, ticketDescartado(ticket.total_centavos));
 
   repo.cancelarEspera();
   const elegidos = propuesta.articulos.filter((a) => todo || a.repetidoDe === null);
@@ -247,17 +269,10 @@ const resolverConfirmacion: ManejadorEspera = ({ repo, mensaje, ahora }, espera)
     repo.actualizarTicket(ticket.id, { estado: 'descartado' });
     return { tipo: 'resuelta', resultado: { resultado: 'ticket_descartado', respuesta: nadaQueGuardar() } };
   }
-  const ids = repo.guardarArticulosTicket(ticket, elegidos);
-  repo.actualizarTicket(ticket.id, { estado: 'guardado' });
   const centavos = elegidos.reduce((s, a) => s + a.centavos, 0);
   return {
     tipo: 'resuelta',
-    resultado: {
-      resultado: 'ticket_guardado',
-      respuesta: ticketGuardado(ticket.comercio, elegidos.length, centavos, ticket.fecha!, ahora),
-      confirmar: ids,
-      confirmarTicket: ticket.id,
-    },
+    resultado: guardar(repo, ticket, elegidos, ticketGuardado(ticket.comercio, elegidos.length, centavos, ticket.fecha!, ahora)),
   };
 };
 

@@ -174,7 +174,8 @@ export function antiguosIgnorados(cantidad: number): string {
 
 // --- Configuración (002, US1) ---
 
-const lista = (nombres: readonly string[], tipo: 'gasto' | 'ingreso') => nombres.map((n) => conEmoji(n, tipo)).join(', ');
+/** Una categoría por renglón, con su emoji (formato pedido por el dueño, 2026-10-14). */
+const lista = (nombres: readonly string[], tipo: 'gasto' | 'ingreso') => nombres.map((n) => conEmoji(n, tipo)).join('\n');
 const TITULO_CATEGORIAS = { gasto: 'Categorías de gasto', ingreso: 'Categorías de ingreso' } as const;
 const INSTRUCCION_LISTA = `Responde ${negrita('predeterminadas')} o escribe las tuyas separadas por comas (máx. 15).`;
 
@@ -182,9 +183,8 @@ const INSTRUCCION_LISTA = `Responde ${negrita('predeterminadas')} o escribe las 
 export function preguntaCategorias(tipo: 'gasto' | 'ingreso', actuales: readonly string[], bienvenida: boolean): string {
   const lineas: string[] = [];
   if (bienvenida) lineas.push(`👋 ${negrita('¡Hola! Vamos a configurar tu asistente.')}`);
-  lineas.push(`⚙️ ${negrita(tipo === 'gasto' ? `1/2 · ${TITULO_CATEGORIAS.gasto}` : TITULO_CATEGORIAS.ingreso)}`);
-  lineas.push(bienvenida ? `Las predeterminadas son: ${lista(actuales, tipo)}.` : `Ahora: ${lista(actuales, tipo)}.`);
-  lineas.push(INSTRUCCION_LISTA);
+  lineas.push(`⚙️ ${negrita(tipo === 'gasto' ? `1/2 · ${TITULO_CATEGORIAS.gasto}` : TITULO_CATEGORIAS.ingreso)}`, '');
+  lineas.push(bienvenida ? 'Las predeterminadas son:' : 'Ahora:', lista(actuales, tipo), '', INSTRUCCION_LISTA);
   return lineas.join('\n');
 }
 
@@ -195,13 +195,16 @@ export function preguntaUmbral(actualCentavos: number): string {
   ].join('\n');
 }
 
-/** "✅ Categorías de gasto: Comida, Ropa → *🌮 Comida, 🏷️ Mascotas, 📦 Otros*" */
+/**
+ * "✅ *Categorías de gasto*" + "Antes: Comida, Ropa…" (si cambió) + la lista nueva, una por renglón.
+ * Sin negrita en la lista: WhatsApp no aplica negrita que abarca varios renglones.
+ */
 export function categoriasGuardadas(tipo: 'gasto' | 'ingreso', antes: readonly string[], ahora: readonly string[]): string {
-  const nuevas = negrita(lista(ahora, tipo));
   const igual = antes.length === ahora.length && antes.every((n, i) => n === ahora[i]);
-  return igual
-    ? `✅ ${TITULO_CATEGORIAS[tipo]}: ${nuevas}`
-    : `✅ ${TITULO_CATEGORIAS[tipo]}: ${antes.map(escapar).join(', ')} → ${nuevas}`;
+  const lineas = [`✅ ${negrita(TITULO_CATEGORIAS[tipo])}`];
+  if (!igual) lineas.push(`Antes: ${antes.map(escapar).join(', ')}`, 'Ahora:');
+  lineas.push(lista(ahora, tipo));
+  return lineas.join('\n');
 }
 
 export interface VistaConfiguracion {
@@ -210,20 +213,20 @@ export interface VistaConfiguracion {
   umbralCentavos: number;
 }
 
-function vinetasConfiguracion(c: VistaConfiguracion, umbralAnterior?: number): string[] {
+function seccionesConfiguracion(c: VistaConfiguracion, umbralAnterior?: number): string[] {
   const umbral =
     umbralAnterior !== undefined && umbralAnterior !== c.umbralCentavos
-      ? `• Umbral: ${formatearMonto(umbralAnterior)} → ${monto(c.umbralCentavos)}`
-      : `• Confirmo arriba de ${monto(c.umbralCentavos)}`;
-  return [`• Gastos: ${lista(c.gastos, 'gasto')}`, `• Ingresos: ${lista(c.ingresos, 'ingreso')}`, umbral];
+      ? `💰 Umbral: ${formatearMonto(umbralAnterior)} → ${monto(c.umbralCentavos)}`
+      : `💰 Confirmo arriba de ${monto(c.umbralCentavos)}`;
+  return ['', negrita('Gastos'), lista(c.gastos, 'gasto'), '', negrita('Ingresos'), lista(c.ingresos, 'ingreso'), '', umbral];
 }
 
 export function configuracionGuardada(c: VistaConfiguracion, umbralAnterior: number): string {
-  return [`✅ ${negrita('Configuración guardada')}`, ...vinetasConfiguracion(c, umbralAnterior)].join('\n');
+  return [`✅ ${negrita('Configuración guardada')}`, ...seccionesConfiguracion(c, umbralAnterior)].join('\n');
 }
 
 export function verConfiguracion(c: VistaConfiguracion): string {
-  return [`⚙️ ${negrita('Tu configuración')}`, ...vinetasConfiguracion(c)].join('\n');
+  return [`⚙️ ${negrita('Tu configuración')}`, ...seccionesConfiguracion(c)].join('\n');
 }
 
 export function listaNoValida(motivo: string): string {
@@ -265,6 +268,16 @@ export interface VistaTicket {
 const tituloTicket = (comercio: string | null) => negrita(comercio ? `Ticket de ${escapar(comercio)}` : 'Ticket');
 const articulos = (n: number) => `${n} artículo${n === 1 ? '' : 's'}`;
 
+/** "1. Leche entera 1 l (2 x) · *$57.00* · 🌮 Comida", con descuento y posible repetido. */
+function lineasArticulos(t: VistaTicket): string[] {
+  return t.articulos.map((a, i) => {
+    let linea = `${i + 1}. ${escapar(a.descripcion)}${a.cantidad ? ` (${escapar(a.cantidad)})` : ''} · ${monto(a.centavos)} · ${conEmoji(a.categoria, 'gasto')}`;
+    if (a.descuentoCentavos > 0) linea += ` · descuento ${monto(a.descuentoCentavos)}`;
+    if (a.repetidoTexto) linea += ` ⚠️ _posible repetido de: ${escapar(a.repetidoTexto)}_`;
+    return linea;
+  });
+}
+
 /** "✅ Suman *$X*…" con el cuadre de FR-018e cuando lo hubo. */
 function lineaSuma(t: VistaTicket): string {
   const igual = 'igual que el total del ticket.';
@@ -280,12 +293,7 @@ function lineaSuma(t: VistaTicket): string {
 export function propuestaTicket(t: VistaTicket, hoy: Date): string {
   const origen = t.origenFecha === 'texto' ? 'fecha que escribiste' : 'fecha del ticket';
   const lineas = [`🧾 ${tituloTicket(t.comercio)} · ${formatearFechaRelativa(t.fecha, hoy)} _(${origen})_`];
-  t.articulos.forEach((a, i) => {
-    let linea = `${i + 1}. ${escapar(a.descripcion)}${a.cantidad ? ` (${escapar(a.cantidad)})` : ''} · ${monto(a.centavos)} · ${conEmoji(a.categoria, 'gasto')}`;
-    if (a.descuentoCentavos > 0) linea += ` · descuento ${monto(a.descuentoCentavos)}`;
-    if (a.repetidoTexto) linea += ` ⚠️ _posible repetido de: ${escapar(a.repetidoTexto)}_`;
-    lineas.push(linea);
-  });
+  lineas.push(...lineasArticulos(t));
   lineas.push(lineaSuma(t));
   if (t.textoIgnorado) lineas.push('ℹ️ Ignoré los productos y montos del texto; solo uso los del ticket.');
   const n = t.articulos.length;
@@ -298,10 +306,20 @@ export function propuestaTicket(t: VistaTicket, hoy: Date): string {
   } else {
     lineas.push(
       repetidos > 0
-        ? `Responde ${negrita('sí')} ${guardar} o ${negrita('sin repetidos')} para guardar ${n - repetidos}.`
-        : `Responde ${negrita('sí')} ${guardar}.`,
+        ? `\nResponde ${negrita('sí')} ${guardar} o ${negrita('sin repetidos')} para guardar ${n - repetidos}.`
+        : `\nResponde ${negrita('sí')} ${guardar}.`,
     );
   }
+  return lineas.join('\n');
+}
+
+/** FR-019 (enmienda): ticket que cuadra, guardado sin confirmación; lista lo guardado y cómo deshacerlo. */
+export function ticketGuardadoDirecto(t: VistaTicket, hoy: Date): string {
+  const origen = t.origenFecha === 'texto' ? 'fecha que escribiste' : 'fecha del ticket';
+  const titulo = negrita(t.comercio ? `Guardé el ticket de ${escapar(t.comercio)}` : 'Guardé el ticket');
+  const lineas = [`✅ ${titulo} · ${formatearFechaRelativa(t.fecha, hoy)} _(${origen})_`, ...lineasArticulos(t), lineaSuma(t)];
+  if (t.textoIgnorado) lineas.push('ℹ️ Ignoré los productos y montos del texto; solo uso los del ticket.');
+  lineas.push(`↩️ Si algo está mal, cita este mensaje y escribe ${negrita('borra el ticket')}.`);
   return lineas.join('\n');
 }
 
@@ -312,10 +330,14 @@ export function ticketGuardado(comercio: string | null, cantidad: number, centav
 export const ticketDescartado = (centavos: number) =>
   `⚠️ No guardé el ticket de ${monto(centavos)} porque no lo confirmaste.`;
 
+/** La respuesta a "¿qué fecha?" no fue una fecha (FR-018c): se descarta el ticket y se dice por qué. */
+export const fechaNoEntendida = (centavos: number) =>
+  `⚠️ No entendí la fecha y descarté el ticket de ${monto(centavos)}. Envía la foto otra vez con la fecha escrita junto a ella, por ejemplo ${mono('12/10/2026')} o ${mono('9 de octubre')}.`;
+
 export const nadaQueGuardar = () => '✅ No guardé nada: todos los artículos ya estaban registrados.';
 
 export const faltaFecha = () =>
-  `🤔 No encontré la fecha del ticket. Envía otra foto donde se vea o escríbela, por ejemplo ${mono('12/10/2026')} o ${mono('ayer')}.`;
+  `🤔 No encontré la fecha del ticket. Envía otra foto donde se vea o escríbela, por ejemplo ${mono('12/10/2026')}, ${mono('9 de octubre')} o ${mono('ayer')}.`;
 
 export const faltaTotal = () =>
   `⚠️ No pude leer el ${negrita('total')} del ticket. Envía una foto más nítida donde se vea el total.`;
