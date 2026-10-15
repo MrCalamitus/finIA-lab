@@ -22,6 +22,10 @@ TypeScript sobre Node 24, Baileys 7.0.0-rc14, zod 4.6.5, `node:sqlite`, Ollama p
 - **Alternatives considered**: `qwen2.5vl:7b` (sin `thinking`, más ligero; candidato si el 27b es
   lento en otra máquina); OCR clásico + LLM de texto (dos pasos, más piezas, peor con tickets
   arrugados).
+- **Prueba de punta a punta (2026-10-14)**, asistente completo con canal simulado y `qwen3.6:27b`:
+  foto del ticket sintético con texto "ayer gasté 50 en café" → propuesta en 17.7 s, 5 artículos que
+  suman $229.90 al centavo, descuento bien leído, fecha tomada del texto y aviso de texto ignorado;
+  "sí" guarda 5 movimientos; la misma foto otra vez marca los 5 como posibles repetidos (12.2 s).
 - **Por validar**: SC-004 y SC-005 con 10 fotos reales en `eval/tickets/` (quickstart).
 
 ## R2. Imágenes por la API de Ollama
@@ -116,6 +120,32 @@ TypeScript sobre Node 24, Baileys 7.0.0-rc14, zod 4.6.5, `node:sqlite`, Ollama p
   intento de respuesta.
 - **Rationale**: FR-006 y FR-020a. Ninguna palabra que cambie configuración o borre en bloque pasa
   por el modelo.
+
+## R11. Cuadre con impuestos y descuento general (enmienda del 2026-10-14)
+
+- **Contexto**: con 10 tickets reales, 3 no cuadraban por diseño: gasolineras con IVA aparte
+  ($259.64 + IVA $40.36 = $300.00) y Costco con un descuento general ($3,050.39 − $60.07).
+- **Decision**: si `Σ artículos ≠ total` y el ticket imprime un subtotal igual a `Σ`, el código
+  prueba `Σ + impuesto`, `Σ − descuento` y `Σ + impuesto − descuento`; la primera que cuadra al
+  centavo se reparte proporcionalmente (mayores residuos, enteros con BigInt) y se muestra en la
+  propuesta (FR-018e).
+- **Rationale**: el modelo solo transcribe números impresos; el código decide y exige doble
+  verificación (subtotal = suma y total exacto). Cada artículo queda con lo realmente pagado y en
+  su categoría. La confirmación de FR-019 sigue siendo obligatoria.
+- **Evaluación con 10 tickets reales (2026-10-14, `qwen3.6:27b`)**: suma y fecha **9/10** (meta ≥ 8),
+  artículos **7/10** (meta ≥ 7). El 9 (gasolina) cuadra con IVA y el 10 (Costco) con el descuento
+  general repartido. Pendientes:
+  - 8 (gasolina): el modelo no transcribe subtotal ni IVA ("SUBTOTAL: $259.64 TOTAL:" y el monto en
+    otra línea).
+  - 7: una letra mal leída en una descripción.
+  - 10: el esperado pone el tamaño en `cantidad` y el modelo lo deja en la descripción.
+  - SC-005: el p95 varía entre corridas (39–60 s) según la carga del servidor; el más lento fue el
+    ticket de Costco (18 líneas) y, en una corrida, el de Walmart.
+- **Hallazgos del mismo ejercicio**, corregidos en `leerImporte`: letra de impuesto al final
+  ("93.00T"), cancelaciones ("97.08-A") y espacios dentro del número ("563. 00").
+- **Alternatives considered**: guardar el IVA o el descuento como movimiento aparte (ensucia las
+  categorías y un descuento negativo rompe `monto_centavos > 0`); aceptar cualquier diferencia
+  como "ajuste" (dejaría pasar lecturas erróneas).
 
 ## Dependencias
 

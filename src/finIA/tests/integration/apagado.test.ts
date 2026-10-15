@@ -22,7 +22,7 @@ test('un mensaje de hace 2 h se registra con su fecha de envío', async () => {
   });
   e.fijarAhora(new Date(2026, 9, 13, 1, 0, 0));
   assert.deepEqual(await e.escribir('gasté 30 en café', { enviadoEn: enviado }), [
-    'Registrado: gasto de $30.00 · Comida · ayer',
+    '✅ Registrado: gasto de *$30.00* · 🌮 Comida · ayer',
   ]);
   const [fila] = e.filas<{ fecha: string }>('SELECT fecha FROM movimientos');
   assert.equal(fila?.fecha, '2026-10-12');
@@ -54,8 +54,8 @@ test('mensajes de más de 24 h se ignoran y se avisa una sola vez al vaciarse la
   assert.deepEqual(
     e.canal.enviados.map((m) => m.texto),
     [
-      'Registrado: gasto de $10.00 · Otros · hoy',
-      'Estuve apagado. Ignoré 3 mensajes de hace más de 24 h; reenvíalos si quieres registrarlos.',
+      '✅ Registrado: gasto de *$10.00* · 📦 Otros · hoy',
+      '🕒 Estuve apagado. Ignoré *3 mensajes* de hace más de 24 h; reenvíalos si quieres registrarlos.',
     ],
   );
   assert.equal(e.interprete.llamadas.length, 1);
@@ -66,7 +66,7 @@ test('mensajes de más de 24 h se ignoran y se avisa una sola vez al vaciarse la
 test('el aviso usa singular con un solo mensaje', async () => {
   const e = entornoReencendido();
   assert.deepEqual(await e.escribir('gasté 1', { enviadoEn: hace(30) }), [
-    'Estuve apagado. Ignoré 1 mensaje de hace más de 24 h; reenvíalo si quieres registrarlo.',
+    '🕒 Estuve apagado. Ignoré *1 mensaje* de hace más de 24 h; reenvíalo si quieres registrarlo.',
   ]);
 });
 

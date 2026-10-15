@@ -19,7 +19,13 @@ export interface Sembrado {
   texto?: string;
 }
 
+/** Bytes mínimos de un JPEG (los "números mágicos" bastan para la validación). */
+export const FOTO_JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
 export interface OpcionesMensaje {
+  /** Adjunta una foto JPEG válida (o la dada). */
+  foto?: boolean | Uint8Array;
+  imagenRechazada?: boolean;
   id?: string;
   citadoId?: string | null;
   enviadoEn?: Date;
@@ -27,11 +33,19 @@ export interface OpcionesMensaje {
   remoteJid?: string;
 }
 
-export function crearEntorno(opciones: { programa?: Parameters<typeof crearInterpreteFalso>[0]; ahora?: Date } = {}) {
+export function crearEntorno(
+  opciones: {
+    programa?: Parameters<typeof crearInterpreteFalso>[0];
+    ahora?: Date;
+    /** Estado de la configuración del dueño (002). Por defecto, ya configurado. */
+    configuracion?: 'pendiente' | 'pausada' | 'completa';
+  } = {},
+) {
   let ahora = opciones.ahora ?? AHORA;
   const reloj = () => ahora;
   const db = abrirBaseDeDatos(':memory:', ahora);
   const repo = crearRepositorio(db);
+  repo.fijarEstadoConfiguracion(opciones.configuracion ?? 'completa');
   const interprete = crearInterpreteFalso(opciones.programa ?? {});
   const canal = crearCanalFalso(GRUPO, reloj);
   const manejador = crearManejador({
@@ -54,6 +68,8 @@ export function crearEntorno(opciones: { programa?: Parameters<typeof crearInter
       texto,
       citadoId: o.citadoId ?? null,
       enviadoEn: o.enviadoEn ?? ahora,
+      ...(o.foto ? { imagen: { mime: 'image/jpeg' as const, bytes: o.foto === true ? FOTO_JPEG : o.foto } } : {}),
+      ...(o.imagenRechazada ? { imagen: null, imagenRechazada: true } : {}),
     };
   }
 
@@ -101,6 +117,8 @@ export function crearEntorno(opciones: { programa?: Parameters<typeof crearInter
           if (m.estado && m.estado !== 'vigente') {
             db.prepare('UPDATE movimientos SET estado = ? WHERE id = ?').run(m.estado, id!);
           }
+          // Un pendiente siempre va con su espera, como lo deja `registrar` (002).
+          if (m.estado === 'pendiente') repo.crearEspera('registro_pendiente', mensajeId);
           if (m.confirmacion) repo.asignarConfirmacion([id!], m.confirmacion);
           return id!;
         }),
@@ -123,3 +141,25 @@ export const mov = (
   categoria: string,
   fecha = '2026-10-13',
 ) => ({ tipo, monto_texto, categoria, fecha });
+
+/** Salida del intérprete de tickets para un ticket de prueba (contracts/ticket.md de la 002). */
+export function salidaTicket(
+  articulos: [descripcion: string, importe: string, categoria?: string, cantidad?: string | null, descuento?: string | null][],
+  total: string | null,
+  cambios: Record<string, unknown> = {},
+) {
+  return {
+    es_ticket: true,
+    comercio: 'Super La Esquina',
+    fecha: '2026-10-12',
+    total_texto: total,
+    articulos: articulos.map(([descripcion, importe, categoria = 'Comida', cantidad = null, descuento = null]) => ({
+      descripcion,
+      cantidad,
+      importe_texto: importe,
+      descuento_texto: descuento,
+      categoria,
+    })),
+    ...cambios,
+  };
+}

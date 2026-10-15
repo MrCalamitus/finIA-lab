@@ -22,6 +22,8 @@ const interprete = crearInterpreteOllama({
   url: config.ollamaUrl,
   modelo: config.ollamaModelo,
   timeoutMs: config.timeoutMs,
+  modeloVision: config.ollamaModeloVision,
+  visionTimeoutMs: config.visionTimeoutMs,
 });
 
 let manejador: ReturnType<typeof crearManejador> | null = null;

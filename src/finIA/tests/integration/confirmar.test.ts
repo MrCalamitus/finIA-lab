@@ -8,7 +8,7 @@ const programa = {
   [BONO]: { accion: 'registrar', movimientos: [mov('ingreso', '75,000', 'Salario')] },
   'gasté 180 en tacos': { accion: 'registrar', movimientos: [mov('gasto', '180', 'Comida')] },
 };
-const PREGUNTA = '¿Confirmas ingreso de $75,000.00 · Salario · hoy? Responde "sí" para guardarlo.';
+const PREGUNTA = '🤔 ¿Confirmas ingreso de *$75,000.00* · 💼 Salario · hoy?\nResponde *sí* para guardarlo.';
 
 const estados = (e: ReturnType<typeof crearEntorno>) =>
   e.filas<{ estado: string; monto_centavos: number }>('SELECT estado, monto_centavos FROM movimientos ORDER BY id');
@@ -25,7 +25,7 @@ for (const afirmativo of ['sí', 'si', 'confirmo', 'Sí.', ' SI ', '¡sí!']) {
     const e = crearEntorno({ programa });
     await e.escribir(BONO);
     const llamadasAntes = e.interprete.llamadas.length;
-    assert.deepEqual(await e.escribir(afirmativo), ['Registrado: ingreso de $75,000.00 · Salario · hoy']);
+    assert.deepEqual(await e.escribir(afirmativo), ['✅ Registrado: ingreso de *$75,000.00* · 💼 Salario · hoy']);
     assert.equal(e.interprete.llamadas.length, llamadasAntes);
     assert.deepEqual(estados(e), [{ estado: 'vigente', monto_centavos: 7_500_000 }]);
     assert.deepEqual(e.filas('SELECT accion FROM cambios'), [{ accion: 'confirmar' }]);
@@ -39,8 +39,8 @@ test('otra respuesta descarta el pendiente, avisa y procesa el mensaje nuevo', a
   await e.escribir(BONO);
   const respuestas = await e.escribir('gasté 180 en tacos');
   assert.deepEqual(respuestas, [
-    'No guardé el ingreso de $75,000.00 porque no lo confirmaste.',
-    'Registrado: gasto de $180.00 · Comida · hoy',
+    '⚠️ No guardé el ingreso de *$75,000.00* porque no lo confirmaste.',
+    '✅ Registrado: gasto de *$180.00* · 🌮 Comida · hoy',
   ]);
   assert.deepEqual(estados(e), [
     { estado: 'descartado', monto_centavos: 7_500_000 },
@@ -53,7 +53,7 @@ test('"no" descarta el pendiente', async () => {
   const e = crearEntorno({ programa });
   await e.escribir(BONO);
   const respuestas = await e.escribir('no');
-  assert.equal(respuestas[0], 'No guardé el ingreso de $75,000.00 porque no lo confirmaste.');
+  assert.equal(respuestas[0], '⚠️ No guardé el ingreso de *$75,000.00* porque no lo confirmaste.');
   assert.equal(estados(e)[0]?.estado, 'descartado');
 });
 
@@ -83,11 +83,11 @@ test('si un movimiento de varios supera el umbral, todos quedan pendientes', asy
   const [pregunta] = await e.escribir(texto);
   assert.equal(
     pregunta,
-    '¿Confirmas estos 2 movimientos?\n1. gasto de $60,000.00 · Transporte · hoy\n2. gasto de $100.00 · Transporte · hoy\nResponde "sí" para guardarlos.',
+    '🤔 ¿Confirmas estos 2 movimientos?\n• gasto de *$60,000.00* · 🚌 Transporte · hoy\n• gasto de *$100.00* · 🚌 Transporte · hoy\nResponde *sí* para guardarlos.',
   );
   assert.deepEqual(estados(e).map((f) => f.estado), ['pendiente', 'pendiente']);
   assert.deepEqual(await e.escribir('sí'), [
-    'Registrados 2 movimientos:\n1. gasto de $60,000.00 · Transporte · hoy\n2. gasto de $100.00 · Transporte · hoy',
+    '✅ *Registrados 2 movimientos*\n• gasto de *$60,000.00* · 🚌 Transporte · hoy\n• gasto de *$100.00* · 🚌 Transporte · hoy',
   ]);
   assert.deepEqual(estados(e).map((f) => f.estado), ['vigente', 'vigente']);
 });
@@ -101,14 +101,14 @@ test('descartar varios usa el plural', async () => {
   });
   await e.escribir(texto);
   const [aviso] = await e.escribir('no');
-  assert.equal(aviso, 'No guardé los 2 movimientos porque no los confirmaste.');
+  assert.equal(aviso, '⚠️ No guardé los *2 movimientos* porque no los confirmaste.');
 });
 
 test('$50,000.00 exactos se guardan sin preguntar', async () => {
   const e = crearEntorno({
     programa: { 'me pagaron 50,000': { accion: 'registrar', movimientos: [mov('ingreso', '50,000', 'Salario')] } },
   });
-  assert.deepEqual(await e.escribir('me pagaron 50,000'), ['Registrado: ingreso de $50,000.00 · Salario · hoy']);
+  assert.deepEqual(await e.escribir('me pagaron 50,000'), ['✅ Registrado: ingreso de *$50,000.00* · 💼 Salario · hoy']);
   assert.equal(estados(e)[0]?.estado, 'vigente');
 });
 

@@ -15,6 +15,8 @@ export interface ResultadoAccion {
   respuesta: string;
   /** Movimientos a los que se asigna el id de la respuesta, para poder citarla (FR-011). */
   confirmar?: number[];
+  /** Ticket al que se asigna el id de la respuesta, para citarlo al borrarlo (FR-020a). */
+  confirmarTicket?: number;
 }
 
 export type FuncionAccion = (ctx: ContextoAccion) => ResultadoAccion;

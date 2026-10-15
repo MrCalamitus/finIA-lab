@@ -132,7 +132,8 @@ nuevos; los existentes solo cambian donde la spec modifica requisitos (categorí
 ```text
 WhatsApp → validación de esquema (texto o imagen) → cola en serie
   → filtro (grupo, dueño, no propio, texto o imagen válida) → ¿ya procesado? → antigüedad (001)
-  → ¿configuración pendiente (nunca configurado)? → iniciar configuración con este mensaje
+  (si nunca se configuró: este mensaje sigue el flujo normal y, al final, se envía la bienvenida
+   con la pregunta 1 — FR-001)
   → ¿espera activa? → ¿la responde? ── sí → resolver (configuración, fecha, confirmación, borrado)
                                      └ no → cancelar/pausar con aviso y seguir
   → ¿comando (configurar, ver configuración, borra el ticket + cita)? → resolver con código

@@ -69,8 +69,9 @@ Lo que el asistente espera del siguiente mensaje (research R7). Como máximo una
 | `creado_en`, `actualizado_en` | TEXT | ISO 8601 |
 
 **Artículo de la propuesta** (JSON en `propuesta`, validado con zod al guardar y al leer):
-`{ descripcion (1–60), cantidad (≤ 20 | null), centavos (> 0), categoria (activa), repetidoDe (id de movimiento | null) }`.
-Máximo 40 artículos.
+`{ descripcion (1–60), cantidad (≤ 20 | null), centavos (> 0, monto final), centavosLeidos (> 0, importe impreso con su descuento), descuentoCentavos (≥ 0), categoria (activa), repetidoDe (id de movimiento | null), repetidoTexto }`.
+Máximo 40 artículos. La propuesta guarda además `ajuste: { impuestoCentavos, descuentoGeneralCentavos } | null`
+(FR-018e); `centavos` ya incluye la parte del ajuste de cada artículo y es lo que se guarda en el movimiento.
 
 ### Transiciones
 

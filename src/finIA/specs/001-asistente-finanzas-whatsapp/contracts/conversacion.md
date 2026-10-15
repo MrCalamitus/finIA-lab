@@ -1,5 +1,9 @@
 # Contrato: conversación en el grupo
 
+> **Sustituido por la v2** ([002](../../002-configuracion-formato-imagenes/contracts/conversacion.md)):
+> mismas entradas y garantías, con formato de WhatsApp, configuración e imágenes. Este archivo
+> queda como registro de la 001.
+
 La interfaz del producto es el chat. Este contrato fija lo que el dueño puede escribir y lo que el
 asistente responde. Las pruebas de integración comparan contra estos formatos. Los montos usan
 `$12,500.00` y las fechas `hoy`, `ayer` o `dd/mm/aaaa`.

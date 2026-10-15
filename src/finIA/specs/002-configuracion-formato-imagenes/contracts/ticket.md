@@ -10,12 +10,16 @@ verdad; el JSON Schema se genera de él (sin `pattern`) y se envía en `format`.
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["es_ticket", "comercio", "fecha", "total_texto", "articulos"],
+  "required": ["es_ticket", "comercio", "fecha", "total_texto", "subtotal_texto", "impuesto_texto",
+               "descuento_general_texto", "articulos"],
   "properties": {
     "es_ticket":   { "type": "boolean" },
     "comercio":    { "type": ["string", "null"], "maxLength": 60 },
     "fecha":       { "type": ["string", "null"], "maxLength": 10 },
     "total_texto": { "type": ["string", "null"], "maxLength": 20 },
+    "subtotal_texto": { "type": ["string", "null"], "maxLength": 20 },
+    "impuesto_texto": { "type": ["string", "null"], "maxLength": 20 },
+    "descuento_general_texto": { "type": ["string", "null"], "maxLength": 20 },
     "articulos": {
       "type": "array", "maxItems": 41,
       "items": {
@@ -44,10 +48,20 @@ Si una falla, no hay propuesta y se responde el aviso correspondiente de
 1. `es_ticket = false` o `articulos` vacío → "No es ticket".
 2. Más de 40 artículos → "Más de 40 artículos".
 3. `total_texto` nulo o no convertible con `parsearMonto` → "Falta el total".
-4. Cada `importe_texto` y `descuento_texto` se convierte con `parsearMonto` (al descuento se le
-   quita un `-` inicial). Si alguno no convierte → "Suma no cuadra" con la suma que sí se pudo leer.
+4. Cada `importe_texto` y `descuento_texto` se lee con `leerImporte`: quita la letra de impuesto
+   final ("93.00T", "275.18 A"), junta espacios dentro del número ("563. 00") y reconoce el signo de
+   cancelación ("97.08-A"); el monto lo convierte `parsearMonto`. Una línea negativa anula el último
+   artículo igual. Si alguno no convierte → "Suma no cuadra" con la suma que sí se pudo leer.
 5. Cada artículo: `centavos = importe − descuento`, debe ser > 0.
-6. `Σ centavos == total` al centavo → si no, "Suma no cuadra".
+6. `Σ centavos == total` al centavo → si cuadra, sin ajuste (el impuesto impreso se ignora).
+   Si no cuadra (FR-018e):
+   - 6a. Solo si `subtotal_texto` se lee y es igual a `Σ centavos`; si no, "Suma no cuadra".
+   - 6b. Se prueba en orden `Σ + impuesto == total`, `Σ − descuento_general == total` y
+     `Σ + impuesto − descuento_general == total`. La primera que cuadre se aplica; si ninguna,
+     "Suma no cuadra".
+   - 6c. El ajuste se reparte proporcionalmente al importe de cada artículo (`floor(X·cᵢ/Σ)` y el
+     remanente a los mayores residuos; empate por orden), con enteros. Ningún artículo puede
+     quedar ≤ 0. Se conserva el importe leído (`centavosLeidos`) y el ajuste para la propuesta.
 7. `categoria` debe ser una categoría de gasto **activa**; si no, se usa `Otros`.
 8. `descripcion`, `cantidad` y `comercio` se recortan y se les quitan símbolos de formato y
    caracteres de control.

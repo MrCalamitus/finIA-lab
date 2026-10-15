@@ -31,6 +31,18 @@ Todas las variables están descritas en
 `.env`, la carpeta de sesión de WhatsApp (`auth_info/`) y la base de datos (`data/`) nunca se
 versionan.
 
+### Actualizar a la 002 (configuración, formato e imágenes)
+
+La 002 migra la base de datos al arrancar (versión 2 del esquema). Antes de la primera
+ejecución, detén el asistente y respalda la base:
+
+```bash
+cp data/finia.db data/finia.db.respaldo
+```
+
+La migración es automática y conserva todos tus movimientos. Si algo sale mal, restaura el
+respaldo y reporta el error.
+
 ## Qué puedes escribir
 
 | Quieres | Escribe |
@@ -40,9 +52,26 @@ versionan.
 | Resumen | "resumen", "resumen de septiembre" |
 | Corregir | cita la confirmación y escribe "era 150"; o "corrige el último a 150" |
 | Borrar | cita la confirmación y escribe "bórralo"; o "borra el último" |
+| Registrar un ticket | envía la foto (con o sin texto, p. ej. "ayer"); revisa la propuesta y responde "sí" |
+| Borrar un ticket | cita "Guardé el ticket…" y escribe "borra el ticket"; luego "sí" |
+| Configurar | "configurar" (categorías de gasto y monto de confirmación), "configurar ingresos", "ver configuración" |
 
-Los montos mayores a $50,000.00 se guardan solo si respondes "sí". Todas las respuestas posibles
-están en [`contracts/conversacion.md`](specs/001-asistente-finanzas-whatsapp/contracts/conversacion.md).
+La primera vez que escribes, el asistente atiende tu mensaje y luego te hace dos preguntas para
+configurarlo. Los montos mayores a tu monto de confirmación ($50,000.00 si no lo cambias) se guardan
+solo si respondes "sí". Todas las respuestas posibles están en
+[`contracts/conversacion.md`](specs/002-configuracion-formato-imagenes/contracts/conversacion.md).
+
+### Fotos de tickets
+
+- Solo JPG o PNG de hasta 5 MB. La foto no se guarda: solo los artículos que confirmes.
+- Se lee cada artículo con su cantidad y precio, y la suma debe coincidir **al centavo** con el
+  total del ticket; si no, te pide una foto más nítida.
+- La fecha sale de lo que escribas junto a la foto ("ayer", "12/10") o, si no, del ticket. Del
+  texto solo se toma la fecha: los productos y montos escritos se ignoran.
+- Si un artículo se parece a algo ya registrado (misma fecha, mismo monto y nombre parecido), se
+  marca como posible repetido y puedes responder "sin repetidos".
+- Las fotos se leen con el mismo Ollama local, con `FINIA_OLLAMA_MODEL_VISION` o, si no lo
+  defines, con `FINIA_OLLAMA_MODEL` (debe tener la capacidad `vision`).
 
 ## Pruebas
 

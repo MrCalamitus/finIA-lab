@@ -1,9 +1,22 @@
 // Adaptador de Baileys (research R2). Convierte los eventos de WhatsApp en MensajeEntrante
 // validados y envía respuestas al grupo. Nunca registra el contenido de la carpeta de sesión.
-import makeWASocket, { DisconnectReason, useMultiFileAuthState, type WAMessage, type WASocket } from 'baileys';
+import makeWASocket, {
+  DisconnectReason,
+  downloadMediaMessage,
+  useMultiFileAuthState,
+  type WAMessage,
+  type WASocket,
+} from 'baileys';
 import qrcode from 'qrcode-terminal';
 import { adaptadorBaileys, type Logger } from '../logger.ts';
-import { validarMensajeEntrante, type Canal, type MensajeEntrante } from '../tipos.ts';
+import {
+  bytesCoinciden,
+  MAX_BYTES_IMAGEN,
+  validarMensajeEntrante,
+  type Canal,
+  type MensajeEntrante,
+  type MimeImagen,
+} from '../tipos.ts';
 
 export interface OpcionesWhatsApp {
   authDir: string;
@@ -28,26 +41,65 @@ function aNumero(valor: unknown): number | null {
   return null;
 }
 
-/** WAMessage → MensajeEntrante validado (constitución I), o null si está malformado. */
-export function convertirMensaje(mensaje: WAMessage): MensajeEntrante | null {
+function camposComunes(mensaje: WAMessage) {
   const remoteJid = mensaje.key?.remoteJid;
   const segundos = aNumero(mensaje.messageTimestamp);
   const contenido = mensaje.message;
-  const stanzaId = contenido?.extendedTextMessage?.contextInfo?.stanzaId;
-  return validarMensajeEntrante({
+  const stanzaId =
+    contenido?.extendedTextMessage?.contextInfo?.stanzaId ?? contenido?.imageMessage?.contextInfo?.stanzaId;
+  return {
     id: `${remoteJid}:${mensaje.key?.id}`,
     remoteJid,
     fromMe: mensaje.key?.fromMe,
-    texto: contenido?.conversation ?? contenido?.extendedTextMessage?.text ?? null,
     citadoId: stanzaId ? `${remoteJid}:${stanzaId}` : null,
     enviadoEn: segundos === null ? undefined : new Date(segundos * 1000),
+  };
+}
+
+/** WAMessage de texto → MensajeEntrante validado (constitución I), o null si está malformado. */
+export function convertirMensaje(mensaje: WAMessage): MensajeEntrante | null {
+  const contenido = mensaje.message;
+  return validarMensajeEntrante({
+    ...camposComunes(mensaje),
+    texto: contenido?.conversation ?? contenido?.extendedTextMessage?.text ?? null,
   });
+}
+
+const TIPOS_IMAGEN: readonly MimeImagen[] = ['image/jpeg', 'image/png'];
+
+/**
+ * Convierte cualquier mensaje. Para fotos (FR-016, FR-021, research R3): revisa tipo y tamaño
+ * declarados antes de descargar, descarga con `descargar` y revisa tamaño y bytes reales. Si algo
+ * falla, el mensaje llega con `imagenRechazada` para poder avisar. La imagen solo vive en memoria.
+ */
+export async function prepararMensaje(
+  mensaje: WAMessage,
+  descargar: (mensaje: WAMessage) => Promise<Uint8Array>,
+): Promise<MensajeEntrante | null> {
+  const foto = mensaje.message?.imageMessage;
+  if (!foto) return convertirMensaje(mensaje);
+
+  const comunes = { ...camposComunes(mensaje), texto: foto.caption ?? null };
+  const rechazada = () => validarMensajeEntrante({ ...comunes, imagen: null, imagenRechazada: true });
+  const mime = foto.mimetype?.split(';')[0]?.trim() as MimeImagen | undefined;
+  const declarado = aNumero(foto.fileLength);
+  if (!mime || !TIPOS_IMAGEN.includes(mime) || declarado === null || declarado > MAX_BYTES_IMAGEN) return rechazada();
+
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await descargar(mensaje));
+  } catch {
+    return rechazada();
+  }
+  if (bytes.length === 0 || bytes.length > MAX_BYTES_IMAGEN || !bytesCoinciden(mime, bytes)) return rechazada();
+  return validarMensajeEntrante({ ...comunes, imagen: { mime, bytes } });
 }
 
 export function crearCanalWhatsApp(opciones: OpcionesWhatsApp): CanalWhatsApp {
   const { logger } = opciones;
   let socket: WASocket | null = null;
   let cerrado = false;
+  let enOrden: Promise<void> = Promise.resolve();
 
   async function conectar(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(opciones.authDir);
@@ -95,16 +147,25 @@ export function crearCanalWhatsApp(opciones: OpcionesWhatsApp): CanalWhatsApp {
       }
     });
 
+    const descargar = async (msg: WAMessage) =>
+      new Uint8Array(await downloadMediaMessage(msg, 'buffer', {}, { logger: adaptadorBaileys(logger), reuploadRequest: nuevo.updateMediaMessage }));
+
     nuevo.ev.on('messages.upsert', ({ messages, type }) => {
       if (type !== 'notify' && type !== 'append') return;
       for (const crudo of messages) {
-        if (crudo.key?.remoteJid !== opciones.grupoJid) continue;
-        const mensaje = convertirMensaje(crudo);
-        if (!mensaje) {
-          logger.warn('mensaje_malformado', { id: crudo.key?.id ?? null });
-          continue;
-        }
-        opciones.alMensaje?.(mensaje);
+        // FR-013/FR-016: nada de otro chat ni de otra persona se descarga ni se procesa.
+        if (crudo.key?.remoteJid !== opciones.grupoJid || crudo.key?.fromMe !== true) continue;
+        // En cadena: la descarga de una foto no debe adelantar ni atrasar el orden de los mensajes.
+        enOrden = enOrden
+          .then(async () => {
+            const mensaje = await prepararMensaje(crudo, descargar);
+            if (!mensaje) {
+              logger.warn('mensaje_malformado', { id: crudo.key?.id ?? null });
+              return;
+            }
+            opciones.alMensaje?.(mensaje);
+          })
+          .catch((error: unknown) => logger.error('mensaje_no_preparado', { error }));
       }
     });
   }

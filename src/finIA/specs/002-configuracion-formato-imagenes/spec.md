@@ -24,6 +24,8 @@ requisitos sigue vigente.
 - Q: ¿La configuración inicial pregunta también por las categorías de ingreso? → A: No: solo categorías de gasto y monto de confirmación; los ingresos usan las predeterminadas y se cambian con "configurar ingresos".
 - Q: ¿Para qué sirve el texto que acompaña la foto de un ticket? → A: Solo para la fecha, y la fecha escrita tiene prioridad sobre la del ticket. Los artículos y montos salen siempre del ticket; si el texto trae productos o montos, se ignoran y la propuesta lo dice.
 - Q: ¿Contra qué se comparan los artículos de un ticket para detectar repetidos? → A: Contra artículos de tickets anteriores y contra gastos escritos por texto: misma fecha, mismo monto exacto y el nombre del producto equivalente (tickets) o presente en el texto original del mensaje (gastos por texto).
+- Q: ¿Qué pasa con un ticket cuyos artículos no suman el total porque el IVA va aparte (gasolineras) o porque hay un descuento general (Costco)? → A: Si el ticket imprime el subtotal y este es igual a la suma de los artículos, el código prueba sumar el impuesto impreso, restar el descuento general impreso o ambos; si así cuadra al centavo, lo reparte entre los artículos y lo muestra en la propuesta.
+- Q: ¿Cómo se reparte ese IVA o descuento entre los artículos? → A: Proporcional al importe de cada artículo, al centavo exacto; cada artículo queda con lo que realmente se pagó y en su categoría.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -45,8 +47,9 @@ un monto por encima del nuevo umbral pide confirmación.
 
 **Acceptance Scenarios**:
 
-1. **Given** un asistente sin configuración guardada, **When** el dueño escribe su primer mensaje,
-   **Then** el asistente le da la bienvenida y le pregunta si quiere usar las categorías
+1. **Given** un asistente sin configuración guardada, **When** el dueño escribe su primer mensaje
+   "gasté 180 en tacos", **Then** el gasto se registra y confirma con los valores predeterminados,
+   y a continuación el asistente le da la bienvenida y le pregunta si quiere usar las categorías
    predeterminadas (mostrándolas) o definir las suyas.
 2. **Given** la pregunta de categorías, **When** el dueño responde "predeterminadas", **Then** se
    guardan las categorías predeterminadas y el asistente pregunta el monto de confirmación.
@@ -177,8 +180,12 @@ confirmación y que solo guarda tras un "sí".
   correcciones nuevos.
 - Un ticket con descuentos por artículo: el descuento se resta del artículo al que corresponde y la
   suma se valida contra el total.
-- Un ticket con un descuento general (no asignado a un artículo) o con propina: la suma no coincide
-  con el total; no se propone nada y el asistente sugiere escribir los gastos a mano.
+- Un ticket con IVA aparte o con descuento general: se cuadra con el subtotal, el impuesto y el
+  descuento impresos según FR-018e; si aun así no cuadra, se pide una foto más nítida.
+- Un ticket con propina: la suma no coincide con el total; no se propone nada y el asistente sugiere
+  escribir los gastos a mano.
+- Un ticket que imprime IVA o IEPS pero cuyos artículos ya suman el total (precios con impuestos
+  incluidos, como en un supermercado): el impuesto impreso se ignora.
 - Un ticket con más de 40 artículos: no se propone nada y el asistente pide registrarlo por partes
   o escribirlo a mano.
 - Un artículo sin cantidad visible: se registra sin cantidad (la cantidad es opcional).
@@ -214,8 +221,10 @@ confirmación y que solo guarda tras un "sí".
 
 **Configuración**
 
-- **FR-001**: Si no hay configuración guardada, el sistema DEBE iniciar la configuración con el
-  siguiente mensaje del dueño, con una bienvenida y la primera pregunta.
+- **FR-001**: Si no hay configuración guardada, el sistema DEBE procesar normalmente el siguiente
+  mensaje del dueño (con los valores predeterminados, FR-009) y, después de responderlo, iniciar la
+  configuración con una bienvenida y la primera pregunta. Ningún mensaje se pierde por iniciar la
+  configuración.
 - **FR-002**: La configuración DEBE preguntar, en mensajes separados y en este orden: (a) si usar
   las categorías de gasto predeterminadas o definir las propias, y (b) el monto a partir del cual
   se pide confirmación. Las categorías de ingreso no se preguntan: se usan las predeterminadas.
@@ -273,9 +282,17 @@ confirmación y que solo guarda tras un "sí".
   proponer un gasto por artículo con la categoría que mejor encaje entre las configuradas. La fecha
   de todos se determina según FR-018c.
 - **FR-018a**: El sistema DEBE leer también el total del ticket y comprobar que la suma de los
-  artículos (con sus descuentos por artículo) coincida al centavo con ese total. Si no puede leer
-  el total o la suma no coincide, NO DEBE proponer nada y DEBE pedir una foto más nítida donde se
-  vea el total, indicando las cifras leídas cuando las haya.
+  artículos (con sus descuentos por artículo) coincida al centavo con ese total, directamente o
+  mediante el cuadre de FR-018e. Si no puede leer el total o la suma no coincide, NO DEBE proponer
+  nada y DEBE pedir una foto más nítida donde se vea el total, indicando las cifras leídas cuando
+  las haya.
+- **FR-018e**: Si la suma de los artículos no coincide con el total, el sistema DEBE intentar
+  cuadrarla, solo cuando el ticket imprime un subtotal igual a esa suma, con las cifras impresas:
+  suma + impuesto, suma − descuento general, o suma + impuesto − descuento general, en ese orden.
+  La primera que coincida al centavo se aplica: el impuesto o el descuento se reparte entre los
+  artículos en proporción a su importe, al centavo exacto, sin que ninguno quede en cero o
+  negativo. La propuesta DEBE mostrar la suma, el impuesto o descuento aplicado y el total. Si la
+  suma ya coincide con el total, el impuesto impreso se ignora (ya está incluido).
 - **FR-018b**: Un ticket DEBE tener como máximo 40 artículos; con más, no se propone nada y se pide
   registrarlo por partes o a mano. Este límite sustituye, solo para imágenes, el máximo de 10
   movimientos por mensaje de la 001.
@@ -283,16 +300,18 @@ confirmación y que solo guarda tras un "sí".
   fecha que el dueño escribió en el texto de la foto, si es válida; (2) la fecha impresa en el
   ticket, si es legible y válida (no futura ni de hace más de 366 días). Si no hay ninguna de las
   dos, el sistema NO DEBE proponer nada todavía: DEBE pedir otra foto donde se vea la fecha o que
-  el dueño la escriba ("12/10/2026", "ayer"). La
-  fecha escrita se interpreta con reglas fijas y se valida igual que en la 001. Si el siguiente
+  el dueño la escriba ("12/10/2026", "ayer"). La fecha escrita se interpreta con reglas fijas y se
+  valida igual que en la 001. Si el dueño envía otra foto, se procesa como un ticket completo nuevo
+  que sustituye al que esperaba fecha (se vuelven a leer artículos, total y fecha). Si el siguiente
   mensaje del dueño no es una foto ni una fecha válida, el ticket se descarta con aviso y ese mensaje
   se procesa normal. El sistema NUNCA DEBE usar la fecha de envío del mensaje para un ticket.
 - **FR-018d**: Antes de proponer, el sistema DEBE comparar cada artículo con los movimientos vigentes
   y marcar como posible repetido el que coincida en fecha y en monto exacto y, además: (a) si el
   movimiento existente salió de un ticket, que su descripción sea equivalente (sin distinguir
   mayúsculas, acentos ni espacios, o cuando una contiene a la otra); (b) si se registró por texto,
-  que la descripción del artículo aparezca en el texto original del mensaje con la misma
-  normalización ("leche" en "gasté 28.50 en leche"). La propuesta DEBE mostrar los marcados con qué
+  que la primera palabra significativa del artículo (al menos 3 letras y que no sea una unidad como
+  "kg", "pz" o "l") aparezca en el texto original del mensaje con la misma normalización ("leche" de
+  "LECHE ENTERA 1L" en "gasté 28.50 en leche"). La propuesta DEBE mostrar los marcados con qué
   movimiento se parecen.
 - **FR-019**: Todos los gastos propuestos desde una imagen DEBEN quedar pendientes y requerir una
   sola confirmación explícita del dueño para el ticket completo, sin importar el monto. Las
@@ -315,9 +334,9 @@ confirmación y que solo guarda tras un "sí".
   pesen más de 5 MB, y avisar al dueño.
 - **FR-022**: El sistema NO DEBE guardar la imagen; solo el movimiento resultante y una marca de que
   provino de una imagen.
-- **FR-023**: Si el modelo de visión no está disponible, tarda demasiado o no encuentra un ticket
-  legible, el sistema NO DEBE guardar nada y DEBE avisar al dueño con una alternativa (escribir el
-  gasto).
+- **FR-023**: Si el modelo de visión no está disponible, tarda más de 60 s (configurable) o no
+  encuentra un ticket legible, el sistema NO DEBE guardar nada y DEBE avisar al dueño con una
+  alternativa (escribir el gasto).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -370,10 +389,11 @@ confirmación y que solo guarda tras un "sí".
 - El dueño tiene disponible un modelo de visión en su máquina o en su red local, distinto o igual
   al modelo de texto.
 - Un ticket corresponde a una sola compra en un solo comercio; se espera una foto por ticket. Los
-  precios del ticket ya incluyen impuestos, como es habitual en México.
+  precios del ticket normalmente ya incluyen impuestos, como es habitual en México; si el ticket
+  imprime subtotal e impuestos aparte (gasolineras) se cuadra con ellos (FR-018e).
 - Las consultas y resúmenes de la 001 siguen funcionando igual: cada artículo es un movimiento.
 - Las imágenes se procesan de una en una, en el mismo orden que los demás mensajes.
 - Los mensajes de audio, video, stickers y documentos siguen fuera de alcance.
 - Fuera de alcance: presupuestos por categoría, cambiar el emoji de una categoría propia,
-  imágenes con varios tickets, tickets con descuento general o propina, facturas en PDF o XML, y
+  imágenes con varios tickets, tickets con propina, facturas en PDF o XML, y
   lectura de estados de cuenta.

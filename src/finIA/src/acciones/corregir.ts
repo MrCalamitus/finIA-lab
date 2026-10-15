@@ -1,6 +1,5 @@
 // US3: corregir monto, categoría o fecha de un movimiento vigente (FR-011, FR-012).
-import { CATEGORIAS_GASTO, CATEGORIAS_INGRESO } from '../dominio/categorias.ts';
-import { digitosPresentes, formatearMonto, parsearMonto, UMBRAL_CONFIRMACION_CENTAVOS } from '../dominio/dinero.ts';
+import { digitosPresentes, formatearMonto, parsearMonto } from '../dominio/dinero.ts';
 import { formatearFechaRelativa, validarFecha } from '../dominio/fechas.ts';
 import { resolverObjetivo } from './objetivo.ts';
 import {
@@ -27,8 +26,9 @@ export const corregir: FuncionAccion = ({ repo, mensaje, interpretacion, ahora }
     const centavos = parsearMonto(valor);
     if (centavos === null || !digitosPresentes(valor, mensaje.texto)) return rechazo(valorNoValido(valor));
     // FR-011: un monto alto debe pasar por la confirmación de FR-005a; aquí no se aplica.
-    if (centavos > UMBRAL_CONFIRMACION_CENTAVOS) {
-      return rechazo(montoCorregidoAlto(centavos, UMBRAL_CONFIRMACION_CENTAVOS));
+    const umbral = repo.umbralCentavos();
+    if (centavos > umbral) {
+      return rechazo(montoCorregidoAlto(centavos, umbral));
     }
     repo.actualizarCampo(movimiento.id, 'monto_centavos', centavos, mensaje.id);
     return {
@@ -38,7 +38,8 @@ export const corregir: FuncionAccion = ({ repo, mensaje, interpretacion, ahora }
   }
 
   if (correccion.campo === 'categoria') {
-    const lista: readonly string[] = movimiento.tipo === 'gasto' ? CATEGORIAS_GASTO : CATEGORIAS_INGRESO;
+    // FR-006b: solo categorías activas.
+    const lista = repo.categorias(movimiento.tipo, { soloActivas: true }).map((c) => c.nombre);
     const categoria = lista.find((c) => c.toLowerCase() === valor.trim().toLowerCase());
     if (!categoria) return rechazo(valorNoValido(valor));
     repo.actualizarCampo(movimiento.id, 'categoria', categoria, mensaje.id);

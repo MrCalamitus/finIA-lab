@@ -20,14 +20,15 @@ test('escenario 1: "resumen" da ingresos, gastos, balance y gasto por categoría
   ]);
   assert.deepEqual(await e.escribir('resumen'), [
     [
-      'Resumen de octubre',
-      'Ingresos: $12,500.00',
-      'Gastos: $4,120.50',
-      'Balance: $8,379.50',
-      'Por categoría:',
-      '· Comida $2,340.00',
-      '· Hogar $1,180.50',
-      '· Transporte $600.00',
+      '📊 *Resumen de octubre*',
+      '💰 Ingresos: *$12,500.00*',
+      '💸 Gastos: *$4,120.50*',
+      '🟢 Balance: *$8,379.50*',
+      '',
+      '*Gasto por categoría*',
+      '```Comida      $2,340.00',
+      'Hogar       $1,180.50',
+      'Transporte    $600.00```',
     ].join('\n'),
   ]);
   assert.deepEqual(e.filas(`SELECT resultado FROM mensajes_procesados WHERE mensaje_id LIKE '%usr%'`), [
@@ -42,7 +43,7 @@ test('el balance negativo lleva signo', async () => {
     { tipo: 'gasto', centavos: 25_000, categoria: 'Ropa' },
   ]);
   const [respuesta] = await e.escribir('resumen');
-  assert.match(respuesta!, /^Balance: -\$150\.00$/m);
+  assert.match(respuesta!, /^🔴 Balance: \*-\$150\.00\*$/m);
 });
 
 test('escenario 2: "resumen de septiembre" solo incluye septiembre', async () => {
@@ -52,7 +53,7 @@ test('escenario 2: "resumen de septiembre" solo incluye septiembre', async () =>
     { tipo: 'gasto', centavos: 7_000, categoria: 'Comida', fecha: '2026-10-10' },
   ]);
   assert.deepEqual(await e.escribir('resumen de septiembre'), [
-    'Resumen de septiembre\nIngresos: $0.00\nGastos: $50.00\nBalance: -$50.00\nPor categoría:\n· Comida $50.00',
+    '📊 *Resumen de septiembre*\n💰 Ingresos: *$0.00*\n💸 Gastos: *$50.00*\n🔴 Balance: *-$50.00*\n\n*Gasto por categoría*\n```Comida  $50.00```',
   ]);
 });
 
@@ -63,13 +64,13 @@ test('resumen de la semana', async () => {
     { tipo: 'gasto', centavos: 7_000, categoria: 'Comida', fecha: '2026-10-11' },
   ]);
   assert.deepEqual(await e.escribir('resumen de la semana'), [
-    'Resumen de esta semana\nIngresos: $1,000.00\nGastos: $0.00\nBalance: $1,000.00',
+    '📊 *Resumen de esta semana*\n💰 Ingresos: *$1,000.00*\n💸 Gastos: *$0.00*\n🟢 Balance: *$1,000.00*',
   ]);
 });
 
 test('sin movimientos avisa que no hay', async () => {
   const e = crearEntorno({ programa });
-  assert.deepEqual(await e.escribir('resumen'), ['No hay movimientos en octubre.']);
+  assert.deepEqual(await e.escribir('resumen'), ['📊 No hay movimientos en octubre.']);
 });
 
 test('solo cuentan los vigentes', async () => {
@@ -80,6 +81,6 @@ test('solo cuentan los vigentes', async () => {
     { tipo: 'gasto', centavos: 4_000, categoria: 'Comida', estado: 'descartado' },
   ]);
   assert.deepEqual(await e.escribir('resumen'), [
-    'Resumen de octubre\nIngresos: $0.00\nGastos: $10.00\nBalance: -$10.00\nPor categoría:\n· Comida $10.00',
+    '📊 *Resumen de octubre*\n💰 Ingresos: *$0.00*\n💸 Gastos: *$10.00*\n🔴 Balance: *-$10.00*\n\n*Gasto por categoría*\n```Comida  $10.00```',
   ]);
 });

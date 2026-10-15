@@ -61,3 +61,25 @@ test('nombreMes en español', () => {
   assert.equal(nombreMes('2026-01'), 'enero');
   assert.equal(nombreMes('2026-09'), 'septiembre');
 });
+
+// --- 002: fecha escrita por el dueño (FR-018c, research R5) ---
+import { leerFechaEscrita } from '../../src/dominio/fechas.ts';
+
+test('leerFechaEscrita reconoce hoy, ayer, antier, dd/mm y dd/mm/aaaa', () => {
+  assert.equal(leerFechaEscrita('súper de ayer', hoy), '2026-10-12');
+  assert.equal(leerFechaEscrita('fue antier', hoy), '2026-10-11');
+  assert.equal(leerFechaEscrita('Hoy', hoy), '2026-10-13');
+  assert.equal(leerFechaEscrita('AYER.', hoy), '2026-10-12');
+  assert.equal(leerFechaEscrita('12/10', hoy), '2026-10-12');
+  assert.equal(leerFechaEscrita('compra del 5/9/2026', hoy), '2026-09-05');
+});
+
+test('leerFechaEscrita: sin fecha o fecha imposible → null', () => {
+  assert.equal(leerFechaEscrita('súper', hoy), null);
+  assert.equal(leerFechaEscrita('31/02/2026', hoy), null);
+  assert.equal(leerFechaEscrita('2 x 28.50', hoy), null);
+});
+
+test('leerFechaEscrita: dd/mm/aaaa tiene prioridad sobre las palabras', () => {
+  assert.equal(leerFechaEscrita('ayer no, fue el 01/10/2026', hoy), '2026-10-01');
+});

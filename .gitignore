@@ -13,6 +13,7 @@ auth_info*/
 *.db-wal
 *.db-shm
 data/
+src/finIA/eval/tickets/*.jpeg
 
 # Dependencias y builds
 node_modules/

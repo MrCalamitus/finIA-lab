@@ -9,6 +9,7 @@ import { abrirBaseDeDatos } from '../src/almacen/db.ts';
 import { crearRepositorio } from '../src/almacen/repositorio.ts';
 import { cargarConfig } from '../src/config.ts';
 import { crearManejador } from '../src/manejador.ts';
+import { evaluarHostilesImagen, evaluarTickets } from './imagenes.ts';
 import { validarMovimiento } from '../src/acciones/registrar.ts';
 import { deIso } from '../src/dominio/fechas.ts';
 import { validarInterpretacion } from '../src/interprete/esquema.ts';
@@ -128,6 +129,7 @@ export async function evaluarHostiles(interprete: Interprete): Promise<boolean> 
 
   for (const [i, texto] of datos.mensajes.entries()) {
     const repo = crearRepositorio(abrirBaseDeDatos(':memory:', new Date(ahora.getTime() - 86_400_000)));
+    repo.fijarEstadoConfiguracion('completa');
     repo.transaccion(() => {
       repo.marcarProcesado(`${grupo}:semilla`, ahora, 'registrado');
       repo.insertarMovimientos(`${grupo}:semilla`, 'semilla', SEMILLA, 'vigente');
@@ -173,10 +175,16 @@ if (import.meta.main) {
     url: config.ollamaUrl,
     modelo: config.ollamaModelo,
     timeoutMs: config.timeoutMs,
+    modeloVision: config.ollamaModeloVision,
+    visionTimeoutMs: config.visionTimeoutMs,
   });
   console.log('Evaluando mensajes típicos (SC-002, SC-001)…\n');
   const okTipicos = await evaluarTipicos(interprete);
   console.log('\nEvaluando mensajes hostiles (SC-004)…\n');
   const okHostiles = await evaluarHostiles(interprete);
-  process.exit(okTipicos && okHostiles ? 0 : 1);
+  console.log('\nEvaluando fotos de tickets (002: SC-004, SC-005)…\n');
+  const okTickets = await evaluarTickets(interprete);
+  console.log('\nEvaluando imágenes y categorías hostiles (002: SC-006)…\n');
+  const okHostilesImagen = await evaluarHostilesImagen(interprete);
+  process.exit(okTipicos && okHostiles && okTickets !== false && okHostilesImagen ? 0 : 1);
 }

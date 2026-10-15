@@ -18,16 +18,16 @@ FR-015) y se añaden configuración e imágenes. Las pruebas comparan contra est
 
 | Situación | Respuesta |
 |---|---|
-| Registro de uno | `✅ Registrado: *$180.00* · 🌮 Comida · hoy` |
-| Registro de varios | `✅ *Registrados 2 movimientos*`<br>`• *$50.00* · 🌮 Comida · hoy`<br>`• *$200.00* · 🚌 Transporte · hoy` |
-| Pide confirmación (umbral) | `🤔 ¿Confirmas ingreso de *$75,000.00* · 💼 Salario · hoy?`<br>`Responde *sí* para guardarlo.` |
+| Registro de uno | `✅ Registrado: gasto de *$180.00* · 🌮 Comida · hoy` (se conserva el tipo: "Otros" existe en gasto e ingreso) |
+| Registro de varios | `✅ *Registrados 2 movimientos*`<br>`• gasto de *$50.00* · 🌮 Comida · hoy`<br>`• gasto de *$200.00* · 🚌 Transporte · hoy` |
+| Pide confirmación (umbral) | `🤔 ¿Confirmas ingreso de *$75,000.00* · 💼 Salario · hoy?`<br>`Responde *sí* para guardarlo.` · varios: `🤔 ¿Confirmas estos 2 movimientos?` + viñetas + `Responde *sí* para guardarlos.` |
 | Pendiente descartado | `⚠️ No guardé el ingreso de *$75,000.00* porque no lo confirmaste.` |
 | Consulta | `📊 *Comida en octubre*`<br>`*$2,340.00* · 14 gastos` |
 | Consulta de ingresos y gastos | `📊 *Octubre*`<br>`💰 Ingresos: *$12,500.00* · 1 ingreso`<br>`💸 Gastos: *$180.00* · 1 gasto` |
 | Sin datos | `📊 No hay gastos de 🌮 Comida en octubre.` |
 | Resumen | ver abajo |
-| Corrección | `✏️ Corregido: gasto · 🌮 Comida · hoy`<br>`Monto: $180.00 → *$150.00*` |
-| Borrado | `🗑️ Borrado: *$180.00* · 🌮 Comida · hoy` |
+| Corrección | `✏️ Corregido: gasto · 🌮 Comida · hoy`<br>`Monto: $180.00 → *$150.00*` · categoría: `✏️ Corregido: gasto de *$180.00* · hoy`<br>`Categoría: Comida → *Transporte*` · fecha: `✏️ Corregido: gasto de *$180.00* · 🌮 Comida`<br>`Fecha: hoy → *ayer*` |
+| Borrado | `🗑️ Borrado: gasto de *$180.00* · 🌮 Comida · hoy` |
 | No se entendió | `⚠️ No pude registrarlo. Escríbelo así: ```gasté 180 en tacos```` |
 | Intérprete no disponible | `⚠️ No puedo interpretar mensajes en este momento. No guardé nada; inténtalo de nuevo en un rato.` |
 | Mensajes atrasados | `🕒 Estuve apagado. Ignoré *3 mensajes* de hace más de 24 h; reenvíalos si quieres registrarlos.` |
@@ -99,4 +99,9 @@ Responde *sí* para guardar los 5 o *sin repetidos* para guardar 4.
 
 - `_(fecha del ticket)_` o `_(fecha que escribiste)_` según el origen (FR-020).
 - La línea `ℹ️` solo aparece si el texto de la foto tenía números además de la fecha.
+- Con cuadre de FR-018e, la línea de suma cambia y los importes de los artículos ya incluyen su parte:
+  - IVA: `✅ Suman *$259.64* + IVA *$40.36* = *$300.00*, igual que el total del ticket. Repartí el IVA entre los artículos.`
+  - Descuento: `✅ Suman *$3,050.39* − descuento *$60.07* = *$2,990.32*, igual que el total del ticket. Repartí el descuento entre los artículos.`
+  - Ambos: `✅ Suman *$…* + IVA *$…* − descuento *$…* = *$…*, igual que el total del ticket. Repartí el IVA y el descuento entre los artículos.`
 - La opción *sin repetidos* solo aparece si hay artículos marcados.
+- Si todos están marcados: `⚠️ Todos parecen repetidos. Responde *sí* para guardarlos de todos modos o *sin repetidos* para no guardar nada.`

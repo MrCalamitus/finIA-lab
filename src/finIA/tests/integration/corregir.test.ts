@@ -22,7 +22,7 @@ test('escenario 1: citando la confirmación, "era 150" corrige el monto y muestr
   const e = crearEntorno({ programa: { 'era 150': corregir('monto', '150') } });
   const [id] = e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida', confirmacion: CONF1 }]);
   assert.deepEqual(await e.escribir('era 150', { citadoId: CONF1 }), [
-    'Corregido: gasto · Comida · hoy. Monto: $180.00 → $150.00',
+    '✏️ Corregido: gasto · 🌮 Comida · hoy\nMonto: $180.00 → *$150.00*',
   ]);
   assert.equal(fila(e, id!).monto_centavos, 15000);
   assert.deepEqual(e.filas('SELECT accion, campo, valor_anterior, valor_nuevo FROM cambios'), [
@@ -52,7 +52,7 @@ test('sin cita, "corrige el último a 150" cambia el vigente más reciente', asy
     { tipo: 'gasto', centavos: 50000, categoria: 'Hogar' },
     { tipo: 'gasto', centavos: 9900, categoria: 'Otros', estado: 'borrado' },
   ]);
-  assert.deepEqual(await e.escribir(texto), ['Corregido: gasto · Hogar · hoy. Monto: $500.00 → $150.00']);
+  assert.deepEqual(await e.escribir(texto), ['✏️ Corregido: gasto · 🏠 Hogar · hoy\nMonto: $500.00 → *$150.00*']);
   assert.equal(fila(e, primero!).monto_centavos, 18000);
   assert.equal(fila(e, segundo!).monto_centavos, 15000);
   assert.equal(fila(e, borrado!).monto_centavos, 9900);
@@ -62,7 +62,7 @@ test('corregir la categoría', async () => {
   const e = crearEntorno({ programa: { 'cámbialo a Transporte': corregir('categoria', 'Transporte') } });
   const [id] = e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida', confirmacion: CONF1 }]);
   assert.deepEqual(await e.escribir('cámbialo a Transporte', { citadoId: CONF1 }), [
-    'Corregido: gasto de $180.00 · hoy. Categoría: Comida → Transporte',
+    '✏️ Corregido: gasto de *$180.00* · hoy\nCategoría: Comida → *Transporte*',
   ]);
   assert.equal(fila(e, id!).categoria, 'Transporte');
 });
@@ -78,7 +78,7 @@ test('una categoría que no pertenece al tipo se rechaza', async () => {
   const e = crearEntorno({ programa: { 'ponle Salario': corregir('categoria', 'Salario') } });
   const [id] = e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida' }]);
   assert.deepEqual(await e.escribir('ponle Salario'), [
-    'No entendí el nuevo valor "Salario". No cambié nada.',
+    '⚠️ No entendí el nuevo valor "Salario". No cambié nada.',
   ]);
   assert.equal(fila(e, id!).categoria, 'Comida');
 });
@@ -91,16 +91,16 @@ test('corregir la fecha valida que sea real y no futura', async () => {
     },
   });
   const [id] = e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida' }]);
-  assert.deepEqual(await e.escribir('fue mañana'), ['No entendí el nuevo valor "2026-10-14". No cambié nada.']);
+  assert.deepEqual(await e.escribir('fue mañana'), ['⚠️ No entendí el nuevo valor "2026-10-14". No cambié nada.']);
   assert.equal(fila(e, id!).fecha, '2026-10-13');
-  assert.deepEqual(await e.escribir('fue ayer'), ['Corregido: gasto de $180.00 · Comida. Fecha: hoy → ayer']);
+  assert.deepEqual(await e.escribir('fue ayer'), ['✏️ Corregido: gasto de *$180.00* · 🌮 Comida\nFecha: hoy → *ayer*']);
   assert.equal(fila(e, id!).fecha, '2026-10-12');
 });
 
 test('el nuevo monto debe aparecer en el mensaje', async () => {
   const e = crearEntorno({ programa: { 'era menos': corregir('monto', '1') } });
   const [id] = e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida' }]);
-  assert.deepEqual(await e.escribir('era menos'), ['No entendí el nuevo valor "1". No cambié nada.']);
+  assert.deepEqual(await e.escribir('era menos'), ['⚠️ No entendí el nuevo valor "1". No cambié nada.']);
   assert.equal(fila(e, id!).monto_centavos, 18000);
 });
 
@@ -108,7 +108,7 @@ test('FR-011: corregir a más de $50,000.00 se rechaza y pide borrar y registrar
   const e = crearEntorno({ programa: { 'era 60,000': corregir('monto', '60,000') } });
   const [id] = e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida' }]);
   assert.deepEqual(await e.escribir('era 60,000'), [
-    'No corregí: $60,000.00 supera $50,000.00. Borra el registro y regístralo de nuevo para confirmarlo.',
+    '⚠️ No corregí: *$60,000.00* supera *$50,000.00*. Borra el registro y regístralo de nuevo para confirmarlo.',
   ]);
   assert.equal(fila(e, id!).monto_centavos, 18000);
 });
@@ -117,7 +117,7 @@ test('escenario 3: sin registros vigentes no se modifica nada y se avisa', async
   const e = crearEntorno({ programa: { 'era 150': corregir('monto', '150') } });
   e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida', estado: 'borrado' }]);
   assert.deepEqual(await e.escribir('era 150'), [
-    'No encontré qué corregir. Cita la confirmación del registro o escribe "corrige el último …".',
+    '⚠️ No encontré qué corregir. Cita la confirmación del registro o escribe ```corrige el último …```',
   ]);
   assert.equal(e.filas('SELECT 1 FROM cambios').length, 0);
 });
@@ -126,7 +126,7 @@ test('citar un mensaje que no es una confirmación no modifica nada', async () =
   const e = crearEntorno({ programa: { 'era 150': corregir('monto', '150') } });
   e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida', confirmacion: CONF1 }]);
   assert.deepEqual(await e.escribir('era 150', { citadoId: `${GRUPO}:otro` }), [
-    'No encontré qué corregir. Cita la confirmación del registro o escribe "corrige el último …".',
+    '⚠️ No encontré qué corregir. Cita la confirmación del registro o escribe ```corrige el último …```',
   ]);
   assert.equal(e.filas('SELECT 1 FROM cambios').length, 0);
 });
@@ -138,7 +138,7 @@ test('una confirmación con dos movimientos sin pista pide precisar', async () =
     { tipo: 'gasto', centavos: 20000, categoria: 'Transporte', confirmacion: CONF1 },
   ]);
   assert.deepEqual(await e.escribir('era 60', { citadoId: CONF1 }), [
-    'Esa confirmación tiene 2 movimientos. Dime cuál: el de $50.00 o el de $200.00.',
+    '⚠️ Esa confirmación tiene 2 movimientos. Dime cuál: el de *$50.00* o el de *$200.00*.',
   ]);
   assert.equal(e.filas('SELECT 1 FROM cambios').length, 0);
 });
@@ -151,7 +151,7 @@ test('con pista de monto se corrige el indicado', async () => {
     { tipo: 'gasto', centavos: 20000, categoria: 'Transporte', confirmacion: CONF1 },
   ]);
   assert.deepEqual(await e.escribir(texto, { citadoId: CONF1 }), [
-    'Corregido: gasto · Comida · hoy. Monto: $50.00 → $60.00',
+    '✏️ Corregido: gasto · 🌮 Comida · hoy\nMonto: $50.00 → *$60.00*',
   ]);
   assert.equal(fila(e, cafe!).monto_centavos, 6000);
   assert.equal(fila(e, gasolina!).monto_centavos, 20000);

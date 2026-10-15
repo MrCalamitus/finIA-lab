@@ -1,0 +1,201 @@
+{
+  "_notas": [
+    "Transcrito de las fotos el 2026-10-14; revisar a mano. centavos = importe de la línea ya con su descuento.",
+    "7.jpeg: la fecha no aparece en la foto (fecha null): el asistente debe pedirla.",
+    "8.jpeg y 9.jpeg: el importe NO incluye IVA (importe + IVA = total). Con las reglas actuales la suma no cuadra.",
+    "10.jpeg: tiene un descuento general de 60.07 y una línea que cancela un elote. Con las reglas actuales no se propone."
+  ],
+  "1.jpeg": {
+    "fecha": "2026-10-05",
+    "total_centavos": 56300,
+    "articulos": [
+      {
+        "descripcion": "CUCH KIEL TH368 ANGO ALMA DMET",
+        "cantidad": "1",
+        "centavos": 15900
+      },
+      {
+        "descripcion": "CORTAD 89301 COMPACT CUT C/1",
+        "cantidad": "1",
+        "centavos": 25500
+      },
+      {
+        "descripcion": "REGLA AST-18 ACERO INOX 45CM",
+        "cantidad": "1",
+        "centavos": 14900
+      }
+    ]
+  },
+  "2.jpeg": {
+    "fecha": "2026-10-05",
+    "total_centavos": 38000,
+    "articulos": [
+      { "descripcion": "TORT. DE PAPA", "cantidad": "1", "centavos": 10000 },
+      { "descripcion": "Z MENU DE $140", "cantidad": "2", "centavos": 28000 }
+    ]
+  },
+  "3.jpeg": {
+    "fecha": "2026-10-08",
+    "total_centavos": 16000,
+    "articulos": [
+      { "descripcion": "CHOCOLATIN", "cantidad": "1", "centavos": 4500 },
+      { "descripcion": "MINISTRUDEL", "cantidad": "1", "centavos": 4500 },
+      { "descripcion": "CUERNITO RELLENO", "cantidad": "2", "centavos": 7000 }
+    ]
+  },
+  "4.jpeg": {
+    "fecha": "2026-10-08",
+    "total_centavos": 27500,
+    "articulos": [
+      {
+        "descripcion": "QUESADILLA INDIVIDUA",
+        "cantidad": "1",
+        "centavos": 9000
+      },
+      { "descripcion": "ELIXIR VIOLETA", "cantidad": "1", "centavos": 9000 },
+      { "descripcion": "LUNITA NUEZ", "cantidad": "1", "centavos": 2000 },
+      {
+        "descripcion": "TORTILLA ESPAÑOLA RE",
+        "cantidad": "1",
+        "centavos": 7500
+      }
+    ]
+  },
+  "5.jpeg": {
+    "fecha": "2026-10-10",
+    "total_centavos": 57500,
+    "articulos": [
+      { "descripcion": "FLAUTAS POLLO", "cantidad": "1", "centavos": 10500 },
+      { "descripcion": "PIERNA COCIDA", "cantidad": "1", "centavos": 3500 },
+      { "descripcion": "Z MENU DE $145", "cantidad": "3", "centavos": 43500 }
+    ]
+  },
+  "6.jpeg": {
+    "fecha": "2026-10-10",
+    "total_centavos": 5100,
+    "articulos": [
+      { "descripcion": "AvenaNQui", "cantidad": "1", "centavos": 1700 },
+      { "descripcion": "AvenaNQui", "cantidad": "1", "centavos": 1700 },
+      { "descripcion": "AvenaNQui", "cantidad": "1", "centavos": 1700 }
+    ]
+  },
+  "7.jpeg": {
+    "fecha": null,
+    "total_centavos": 65850,
+    "articulos": [
+      { "descripcion": "PAN PREMIU", "cantidad": "1", "centavos": 8500 },
+      {
+        "descripcion": "STAQLQSOCO",
+        "cantidad": "1",
+        "centavos": 7000
+      },
+      { "descripcion": "PARM RALL", "cantidad": null, "centavos": 13300 },
+      {
+        "descripcion": "KLNx BOUTI",
+        "cantidad": null,
+        "centavos": 1450
+      },
+      {
+        "descripcion": "SLIMPOP LI",
+        "cantidad": null,
+        "centavos": 4500
+      },
+      { "descripcion": "CHOBCOCO2", "cantidad": "4", "centavos": 10000 },
+      { "descripcion": "KFIR COCO", "cantidad": null, "centavos": 12300 },
+      { "descripcion": "SJUAN HVO", "cantidad": null, "centavos": 5800 },
+      { "descripcion": "GLOBO", "cantidad": null, "centavos": 3000 }
+    ]
+  },
+  "8.jpeg": {
+    "fecha": "2026-10-13",
+    "total_centavos": 30000,
+    "articulos": [
+      { "descripcion": "MAGNA", "cantidad": "12.51", "centavos": 25964 }
+    ]
+  },
+  "9.jpeg": {
+    "fecha": "2026-10-13",
+    "total_centavos": 61856,
+    "articulos": [
+      { "descripcion": "MAGNA", "cantidad": "25.78", "centavos": 61856 }
+    ]
+  },
+  "10.jpeg": {
+    "fecha": "2026-10-14",
+    "total_centavos": 299032,
+    "articulos": [
+      {
+        "descripcion": "DUMPLINGS AL VAPOR",
+        "cantidad": null,
+        "centavos": 27518
+      },
+      {
+        "descripcion": "KS CURCUMA 340 G",
+        "cantidad": "340 G",
+        "centavos": 9196
+      },
+      {
+        "descripcion": "ELOT S.MIG 3/220 G",
+        "cantidad": "3/220 G",
+        "centavos": 9708
+      },
+      {
+        "descripcion": "ESPINACA 1.13 KG",
+        "cantidad": "1.13 KG",
+        "centavos": 9196
+      },
+      {
+        "descripcion": "CHIA ORGANICA 907G",
+        "cantidad": "907G",
+        "centavos": 14219
+      },
+      {
+        "descripcion": "BLUEBERRIES 510 G",
+        "cantidad": "510 G",
+        "centavos": 16265
+      },
+      {
+        "descripcion": "KS FRESAS GRADO A",
+        "cantidad": null,
+        "centavos": 23426
+      },
+      {
+        "descripcion": "KS PECHUG PAVO 454",
+        "cantidad": null,
+        "centavos": 27518
+      },
+      {
+        "descripcion": "FRAMB ORG 340 G",
+        "cantidad": "340 G",
+        "centavos": 13196
+      },
+      { "descripcion": "FRESA 907 G", "cantidad": "907 G", "centavos": 15754 },
+      {
+        "descripcion": "OATLY BEBIDA AVENA",
+        "cantidad": null,
+        "centavos": 33656
+      },
+      {
+        "descripcion": "TORTILLAS D HARINA",
+        "cantidad": null,
+        "centavos": 9954
+      },
+      {
+        "descripcion": "CANELA MOLIDA 303G",
+        "cantidad": "303G",
+        "centavos": 9810
+      },
+      { "descripcion": "SAZONADOR CARNE", "cantidad": null, "centavos": 12173 },
+      {
+        "descripcion": "KRAFT PARMESAN 680",
+        "cantidad": null,
+        "centavos": 22403
+      },
+      {
+        "descripcion": "RALLADOR DE COCINA",
+        "cantidad": null,
+        "centavos": 51047
+      }
+    ]
+  }
+}

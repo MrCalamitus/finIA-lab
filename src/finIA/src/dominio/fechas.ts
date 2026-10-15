@@ -81,6 +81,37 @@ export function formatearFechaRelativa(iso: string, hoy: Date): string {
   return `${dia}/${mes}/${anio}`;
 }
 
+// --- 002: fecha escrita por el dueño (FR-018c, research R5) ---
+
+const sinAcentos = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/**
+ * Busca una fecha escrita en el texto, en este orden: dd/mm/aaaa, dd/mm, "antier", "ayer", "hoy".
+ * Devuelve la fecha ISO y el fragmento encontrado, o null. No valida rangos (usa `validarFecha`).
+ */
+export function fechaEscritaConCoincidencia(texto: string, hoy: Date): { iso: string; coincidencia: string } | null {
+  const normal = sinAcentos(texto);
+  const completa = /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/.exec(normal);
+  if (completa) {
+    const iso = `${completa[3]}-${dos(Number(completa[2]))}-${dos(Number(completa[1]))}`;
+    return deIso(iso) ? { iso, coincidencia: completa[0] } : null;
+  }
+  const corta = /\b(\d{1,2})\/(\d{1,2})\b/.exec(normal);
+  if (corta) {
+    const iso = `${hoy.getFullYear()}-${dos(Number(corta[2]))}-${dos(Number(corta[1]))}`;
+    return deIso(iso) ? { iso, coincidencia: corta[0] } : null;
+  }
+  const palabras: [string, number][] = [['antier', -2], ['ayer', -1], ['hoy', 0]];
+  for (const [palabra, dias] of palabras) {
+    if (new RegExp(`\\b${palabra}\\b`).test(normal)) return { iso: aIso(sumarDias(hoy, dias)), coincidencia: palabra };
+  }
+  return null;
+}
+
+export function leerFechaEscrita(texto: string, hoy: Date): string | null {
+  return fechaEscritaConCoincidencia(texto, hoy)?.iso ?? null;
+}
+
 /** "2026-10" → "octubre". */
 export function nombreMes(yyyyMm: string): string {
   const mes = Number(yyyyMm.slice(5, 7));

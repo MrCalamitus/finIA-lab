@@ -52,10 +52,10 @@ test('SC-003: 1,000 movimientos aleatorios; cada total coincide al centavo', asy
     const [respuesta] = await e.escribir(c.texto);
     assert.ok(Number.isSafeInteger(esperado));
     if (incluidos.length === 0) {
-      assert.match(respuesta!, /^No hay/);
+      assert.match(respuesta!, /No hay/);
     } else {
       assert.ok(
-        respuesta!.includes(`${formatearMonto(esperado)} (${incluidos.length} gasto`),
+        respuesta!.includes(`*${formatearMonto(esperado)}* · ${incluidos.length} gasto`),
         `${c.texto}: esperaba ${formatearMonto(esperado)} en "${respuesta}"`,
       );
     }
