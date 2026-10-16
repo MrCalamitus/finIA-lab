@@ -102,7 +102,9 @@ src/
 │   └── ollama.ts            # cliente fetch con timeout
 ├── acciones/
 │   ├── despachador.ts       # lista cerrada: intención → acción
+│   ├── tipos.ts             # contexto y resultado de una acción
 │   ├── registrar.ts  confirmar.ts  consultar.ts  resumen.ts  corregir.ts  borrar.ts
+│   ├── objetivo.ts          # qué movimiento corregir o borrar (cita o último)
 │   └── respuestas.ts        # textos de contracts/conversacion.md
 ├── almacen/
 │   ├── db.ts                # conexión node:sqlite y migraciones
@@ -133,16 +135,19 @@ Capas finas por carpeta; sin frameworks.
 
 ```text
 Baileys messages.upsert
+  → validación de esquema (MensajeEntrante) ── malformado → descartar
+  → cola en serie (todo lo que sigue ocurre dentro, un mensaje a la vez)
   → filtro (grupo, fromMe, no en mensajes_enviados, texto, ≤ 500)   ── no → ignorar
+    (dentro de la cola: el eco de una respuesta se evalúa después de guardar su id)
   → ¿ya en mensajes_procesados? ── sí → ignorar
-  → ¿anterior a primer_arranque? ── sí → ignorar ; ¿> 24 h? ── sí → ignorado_antiguo (+aviso al final)
-  → cola en serie
+  → ¿anterior a primer_arranque? ── sí → ignorar ; ¿> 24 h? ── sí → ignorado_antiguo (+aviso al vaciarse la cola)
   → ¿hay pendiente? ── sí → ¿afirmativo? ── sí → confirmar ; no → descartar + aviso, y seguir
   → intérprete (Ollama) ── error/timeout → aviso "no disponible"
   → validación (zod + reglas de contrato) ── falla → aviso con ejemplo
   → despachador (registrar | consultar | resumen | corregir | borrar)
   → transacción: mensajes_procesados + movimientos/cambios
-  → enviar respuesta → guardar id en mensajes_enviados
+  → enviar respuesta (hasta 3 intentos) → guardar id en mensajes_enviados
+    → si confirma registros, guardar ese id en confirmacion_msg_id
 ```
 
 ## Trazabilidad requisito → diseño

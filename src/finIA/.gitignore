@@ -1,0 +1,10 @@
+# Dependencias
+node_modules/
+
+# Secretos y credenciales (constitución IV)
+.env
+.env.local
+auth_info*/
+
+# Datos financieros locales
+data/

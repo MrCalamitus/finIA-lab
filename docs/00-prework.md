@@ -60,14 +60,23 @@ specify --version    # debe imprimir: specify 1.0.12
 | Windows | [Descarga para Windows](https://ollama.com/download/windows) |
 | Linux | `curl -fsSL https://ollama.com/install.sh \| sh` |
 
-Descarga el modelo del taller (**pesa varios GB; hazlo en casa**):
+Descarga el modelo del taller. Usamos **Qwen 3.6**, y la versión depende de la RAM de tu laptop. **Más RAM permite un modelo más grande, y un modelo más grande regularmente da mejores resultados**: entiende mejor tus mensajes y se equivoca menos al registrar gastos. Elige el adecuado basado en la RAM de tu computadora:
+
+| RAM de tu laptop | Modelo | Descarga aprox. |
+|---|---|---|
+| 8 GB | `qwen3.5:4b` | 3.5 GB |
+| 16 GB | `qwen3.5:9b` | 7 GB |
+| 24–32 GB | `qwen3.6:27b` | 17 GB |
+| 64 GB o más | `qwen3.6:35b-a3b-q8_0` | 39 GB |
+
+> Con 8 y 16 GB, qwen3.6 no cabe en memoria, así que usamos **qwen3.5**, su versión anterior, de la misma familia y en tamaño chico. Funciona para el taller, solo que con respuestas menos finas y/o más lentas.
+
+**Pesa varios GB: descárgalo en casa**, no con el Wi-Fi del evento. Sustituye `<MODELO>` por el de tu fila:
 
 ```bash
-ollama pull <MODELO_DEL_TALLER>     # te confirmamos el nombre exacto antes del taller
-ollama run <MODELO_DEL_TALLER> "Responde solo: listo"
+ollama pull <MODELO>
+ollama run <MODELO> "Responde solo: listo"
 ```
-
-> 💡 ¿Tu laptop tiene 8 GB de RAM o menos? Instala Ollama de todos modos, pero no descargues el modelo: en el taller habrá un **servidor compartido** en la red local.
 
 ## 5. WhatsApp
 
@@ -82,16 +91,9 @@ WhatsApp no deja crear un grupo vacío, así que:
 1. Crea un grupo nuevo agregando a **un** contacto de confianza.
 2. Nómbralo, por ejemplo, **`finIA 💰`**.
 3. En la info del grupo, **elimina** a ese contacto. Ahora solo quedas tú.
-4. Escribe un mensaje de prueba. Ese grupo será la "terminal" de tu asistente.
+4. Escribe un mensaje de prueba. Ese grupo será el canal de comunicación con tu asistente.
 
 El día del taller, vincularemos tu sesión escaneando un código QR desde **WhatsApp → Dispositivos vinculados**. Lleva el teléfono **con batería**.
-
-## 6. Clona el repo del taller
-
-```bash
-git clone <URL_DEL_REPO> finIA-lab
-cd finIA-lab
-```
 
 ---
 
@@ -106,11 +108,10 @@ uv --version
 specify --version            # specify 1.0.12
 node --version               # v24 o superior
 ollama --version
-ollama list                  # debe aparecer el modelo del taller (salvo que uses el servidor compartido)
+ollama list                  # debe aparecer el modelo que descargaste
 ```
 
 - [ ] Todos los comandos anteriores responden
 - [ ] Iniciaste sesión en Claude Code con tu cuenta Pro
-- [ ] Tienes tu grupo de WhatsApp de un solo miembro
-- [ ] Leíste los [conceptos](conceptos/) (opcional, pero recomendado)
-- [ ] Clonaste el repo del taller
+- [ ] Tienes tu grupo de WhatsApp de ti para ti
+- [ ] Descargaste el modelo de tu fila y respondió "listo"
