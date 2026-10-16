@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { crearLogger } from '../../src/logger.ts';
+import { adaptadorBaileys, crearLogger } from '../../src/logger.ts';
 
 const raiz = new URL('../../', import.meta.url);
 
@@ -60,4 +60,19 @@ test('el logger respeta el nivel mínimo', () => {
   logger.warn('c');
   logger.error('d');
   assert.equal(lineas.length, 2);
+});
+
+test('el adaptador de Baileys agrega el motivo del error, pero no los objetos internos', () => {
+  const { logger, lineas } = capturar('info');
+  const adaptador = adaptadorBaileys(logger);
+  adaptador.error(
+    { err: new Error('Bad MAC'), key: { remoteJid: '120363111111111111@g.us' }, privKey: 'clave-privada' },
+    'failed to decrypt message',
+  );
+  adaptador.error({ error: { message: 'No session record' } }, 'transaction failed, rolling back');
+  const salida = lineas.join('\n');
+  assert.match(salida, /failed to decrypt message: Bad MAC/);
+  assert.match(salida, /transaction failed, rolling back: No session record/);
+  assert.ok(!salida.includes('clave-privada'));
+  assert.ok(!salida.includes('120363111111111111@g.us'));
 });

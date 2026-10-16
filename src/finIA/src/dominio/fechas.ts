@@ -81,6 +81,63 @@ export function formatearFechaRelativa(iso: string, hoy: Date): string {
   return `${dia}/${mes}/${anio}`;
 }
 
+// --- 002: fecha escrita por el dueño (FR-018c, research R5) ---
+
+const sinAcentos = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// "9 de octubre", "9 oct", "9 de octubre de 2025" (sobre texto en minúsculas y sin acentos).
+const NOMBRES_MES =
+  'enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|' +
+  'ene|feb|mar|abr|may|jun|jul|ago|sept|sep|set|oct|nov|dic';
+const MES_CON_NOMBRE = new RegExp(`\\b(\\d{1,2})\\s+(?:de\\s+)?(${NOMBRES_MES})\\b\\.?(?:\\s+(?:del?\\s+)?(\\d{4})\\b)?`);
+
+function numeroDeMes(nombre: string): number {
+  const prefijo = nombre === 'setiembre' || nombre === 'set' ? 'sep' : nombre.slice(0, 3);
+  return ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'].indexOf(prefijo) + 1;
+}
+
+/** Fecha sin año: la de este año, o la del anterior si caería en el futuro ("25 de diciembre" en octubre). */
+function sinAnio(dia: number, mes: number, hoy: Date): string | null {
+  const iso = `${hoy.getFullYear()}-${dos(mes)}-${dos(dia)}`;
+  if (!deIso(iso)) return null;
+  return iso > aIso(hoy) ? `${hoy.getFullYear() - 1}-${dos(mes)}-${dos(dia)}` : iso;
+}
+
+/**
+ * Busca una fecha escrita en el texto, en este orden: dd/mm/aaaa, "9 de octubre [de aaaa]", dd/mm,
+ * "antier", "ayer", "hoy".
+ * Devuelve la fecha ISO y el fragmento encontrado, o null. No valida rangos (usa `validarFecha`).
+ */
+export function fechaEscritaConCoincidencia(texto: string, hoy: Date): { iso: string; coincidencia: string } | null {
+  const normal = sinAcentos(texto);
+  const completa = /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/.exec(normal);
+  if (completa) {
+    const iso = `${completa[3]}-${dos(Number(completa[2]))}-${dos(Number(completa[1]))}`;
+    return deIso(iso) ? { iso, coincidencia: completa[0] } : null;
+  }
+  const conNombre = MES_CON_NOMBRE.exec(normal);
+  if (conNombre) {
+    const mes = numeroDeMes(conNombre[2]!);
+    const dia = Number(conNombre[1]);
+    const iso = conNombre[3] ? `${conNombre[3]}-${dos(mes)}-${dos(dia)}` : sinAnio(dia, mes, hoy);
+    return iso && deIso(iso) ? { iso, coincidencia: conNombre[0] } : null;
+  }
+  const corta = /\b(\d{1,2})\/(\d{1,2})\b/.exec(normal);
+  if (corta) {
+    const iso = sinAnio(Number(corta[1]), Number(corta[2]), hoy);
+    return iso ? { iso, coincidencia: corta[0] } : null;
+  }
+  const palabras: [string, number][] = [['antier', -2], ['ayer', -1], ['hoy', 0]];
+  for (const [palabra, dias] of palabras) {
+    if (new RegExp(`\\b${palabra}\\b`).test(normal)) return { iso: aIso(sumarDias(hoy, dias)), coincidencia: palabra };
+  }
+  return null;
+}
+
+export function leerFechaEscrita(texto: string, hoy: Date): string | null {
+  return fechaEscritaConCoincidencia(texto, hoy)?.iso ?? null;
+}
+
 /** "2026-10" → "octubre". */
 export function nombreMes(yyyyMm: string): string {
   const mes = Number(yyyyMm.slice(5, 7));

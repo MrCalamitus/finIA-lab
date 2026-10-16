@@ -36,18 +36,20 @@ function prepararMensaje(repo: ReturnType<typeof nuevaBase>['repo'], id = 'g:1')
   repo.marcarProcesado(id, AHORA, 'registrado');
 }
 
-test('las migraciones crean las 5 tablas', () => {
+test('las migraciones crean las 8 tablas (v2)', () => {
   const { db } = nuevaBase();
   const tablas = db
     .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
     .all()
     .map((f) => (f as { name: string }).name);
-  assert.deepEqual(tablas, ['cambios', 'estado', 'mensajes_enviados', 'mensajes_procesados', 'movimientos']);
+  assert.deepEqual(tablas, [
+    'cambios', 'categorias', 'espera', 'estado', 'mensajes_enviados', 'mensajes_procesados', 'movimientos', 'tickets',
+  ]);
 });
 
 test('guarda version_esquema y primer_arranque', () => {
   const { repo } = nuevaBase();
-  assert.equal(repo.leerEstado('version_esquema'), '1');
+  assert.equal(repo.leerEstado('version_esquema'), '2');
   assert.equal(repo.primerArranque().toISOString(), AHORA.toISOString());
 });
 
@@ -87,7 +89,7 @@ test('movimientos aplica sus restricciones', () => {
   assert.throws(() => insertarMovimiento(db, { indice_en_mensaje: 1, monto_centavos: -100 }), /CHECK/);
   assert.throws(() => insertarMovimiento(db, { indice_en_mensaje: 1, tipo: 'prestamo' }), /CHECK/);
   assert.throws(() => insertarMovimiento(db, { indice_en_mensaje: 1, estado: 'oculto' }), /CHECK/);
-  assert.throws(() => insertarMovimiento(db, { indice_en_mensaje: 10 }), /CHECK/);
+  assert.throws(() => insertarMovimiento(db, { indice_en_mensaje: 40 }), /CHECK/);
   assert.throws(() => insertarMovimiento(db), /UNIQUE/);
   assert.throws(() => insertarMovimiento(db, { mensaje_origen_id: 'g:no-existe' }), /FOREIGN KEY/);
 });

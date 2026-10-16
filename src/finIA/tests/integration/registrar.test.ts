@@ -24,7 +24,7 @@ test('escenario 1: "gasté 180 en tacos" registra un gasto y confirma', async ()
     programa: { 'gasté 180 en tacos': { accion: 'registrar', movimientos: [mov('gasto', '180', 'Comida')] } },
   });
   const respuestas = await e.escribir('gasté 180 en tacos');
-  assert.deepEqual(respuestas, ['Registrado: gasto de $180.00 · Comida · hoy']);
+  assert.deepEqual(respuestas, ['✅ Registrado: gasto de *$180.00* · 🌮 Comida · hoy']);
   const [fila] = movimientos(e);
   assert.equal(fila?.tipo, 'gasto');
   assert.equal(fila?.monto_centavos, 18000);
@@ -40,7 +40,7 @@ test('escenario 2: "me pagaron 12,500 de la quincena" registra un ingreso de Sal
   const e = crearEntorno({
     programa: { [texto]: { accion: 'registrar', movimientos: [mov('ingreso', '12,500', 'Salario')] } },
   });
-  assert.deepEqual(await e.escribir(texto), ['Registrado: ingreso de $12,500.00 · Salario · hoy']);
+  assert.deepEqual(await e.escribir(texto), ['✅ Registrado: ingreso de *$12,500.00* · 💼 Salario · hoy']);
   assert.equal(movimientos(e)[0]?.monto_centavos, 1_250_000);
 });
 
@@ -49,7 +49,7 @@ test('escenario 3: "ayer gasté 99.90 en el súper" guarda la fecha de ayer y el
   const e = crearEntorno({
     programa: { [texto]: { accion: 'registrar', movimientos: [mov('gasto', '99.90', 'Comida', '2026-10-12')] } },
   });
-  assert.deepEqual(await e.escribir(texto), ['Registrado: gasto de $99.90 · Comida · ayer']);
+  assert.deepEqual(await e.escribir(texto), ['✅ Registrado: gasto de *$99.90* · 🌮 Comida · ayer']);
   const [fila] = movimientos(e);
   assert.equal(fila?.fecha, '2026-10-12');
   assert.equal(fila?.monto_centavos, 9990);
@@ -68,8 +68,8 @@ test('FR-004: "Otros" es válido para gasto e ingreso', async () => {
       'me encontré 100': { accion: 'registrar', movimientos: [mov('ingreso', '100', 'Otros')] },
     },
   });
-  assert.deepEqual(await e.escribir('gasté 300 en una multa'), ['Registrado: gasto de $300.00 · Otros · hoy']);
-  assert.deepEqual(await e.escribir('me encontré 100'), ['Registrado: ingreso de $100.00 · Otros · hoy']);
+  assert.deepEqual(await e.escribir('gasté 300 en una multa'), ['✅ Registrado: gasto de *$300.00* · 📦 Otros · hoy']);
+  assert.deepEqual(await e.escribir('me encontré 100'), ['✅ Registrado: ingreso de *$100.00* · 📦 Otros · hoy']);
 });
 
 test('escenario 6: un mensaje con dos movimientos registra ambos y responde una sola vez', async () => {
@@ -81,7 +81,7 @@ test('escenario 6: un mensaje con dos movimientos registra ambos y responde una 
   });
   const respuestas = await e.escribir(texto);
   assert.deepEqual(respuestas, [
-    'Registrados 2 movimientos:\n1. gasto de $50.00 · Comida · hoy\n2. gasto de $200.00 · Transporte · hoy',
+    '✅ *Registrados 2 movimientos*\n• gasto de *$50.00* · 🌮 Comida · hoy\n• gasto de *$200.00* · 🚌 Transporte · hoy',
   ]);
   const filas = movimientos(e);
   assert.deepEqual(filas.map((f) => [f.monto_centavos, f.indice_en_mensaje]), [[5000, 0], [20000, 1]]);
@@ -96,7 +96,7 @@ test('escenario 7: si uno de varios movimientos es inválido, no se guarda ningu
     },
   });
   assert.deepEqual(await e.escribir(texto), [
-    'No guardé nada: no entendí "mucho". Envíalo de nuevo, por ejemplo: "gasté 50 en café y 200 en gasolina".',
+    '⚠️ No guardé nada: no entendí "mucho". Envíalo de nuevo, por ejemplo: ```gasté 50 en café y 200 en gasolina```',
   ]);
   assert.equal(movimientos(e).length, 0);
 });

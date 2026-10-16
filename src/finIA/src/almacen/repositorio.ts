@@ -1,6 +1,7 @@
 // Acceso a datos. Solo consultas parametrizadas. Nunca se borran filas de movimientos:
 // borrar = cambiar su estado (borrado lógico).
 import type { DatabaseSync } from 'node:sqlite';
+import { emojiPredeterminado } from '../dominio/categorias.ts';
 
 export type Resultado =
   | 'registrado'
@@ -11,7 +12,36 @@ export type Resultado =
   | 'borrado'
   | 'confirmado'
   | 'rechazado'
-  | 'ignorado_antiguo';
+  | 'ignorado_antiguo'
+  | 'configuracion'
+  | 'ticket_esperando_fecha'
+  | 'ticket_propuesto'
+  | 'ticket_guardado'
+  | 'ticket_descartado'
+  | 'ticket_borrado'
+  | 'imagen_rechazada';
+
+export type TipoEspera =
+  | 'config_categorias_gasto'
+  | 'config_umbral'
+  | 'config_categorias_ingreso'
+  | 'ticket_fecha'
+  | 'ticket_confirmacion'
+  | 'borrar_ticket'
+  | 'registro_pendiente';
+
+export interface Espera {
+  tipo: TipoEspera;
+  referencia: string | null;
+}
+
+export type EstadoConfiguracion = 'pendiente' | 'pausada' | 'completa';
+
+export interface Categoria {
+  nombre: string;
+  emoji: string;
+  activa: boolean;
+}
 
 export type Tipo = 'gasto' | 'ingreso';
 export type Estado = 'pendiente' | 'vigente' | 'borrado' | 'descartado';
@@ -29,6 +59,10 @@ export interface Movimiento {
   estado: Estado;
   creado_en: string;
   actualizado_en: string;
+  origen: 'texto' | 'imagen';
+  descripcion: string | null;
+  cantidad: string | null;
+  ticket_id: number | null;
 }
 
 export interface NuevoMovimiento {
@@ -36,6 +70,50 @@ export interface NuevoMovimiento {
   montoCentavos: number;
   categoria: string;
   fecha: string;
+}
+
+export type EstadoTicket = 'esperando_fecha' | 'pendiente' | 'guardado' | 'descartado' | 'borrado';
+
+export interface Ticket {
+  id: number;
+  mensaje_origen_id: string;
+  comercio: string | null;
+  fecha: string | null;
+  origen_fecha: 'texto' | 'ticket' | null;
+  total_centavos: number;
+  /** JSON de la propuesta; se valida al leerlo (acciones/ticket.ts). */
+  propuesta: string;
+  texto_foto: string | null;
+  estado: EstadoTicket;
+  confirmacion_msg_id: string | null;
+}
+
+export interface NuevoTicket {
+  mensajeOrigenId: string;
+  comercio: string | null;
+  fecha: string | null;
+  origenFecha: 'texto' | 'ticket' | null;
+  totalCentavos: number;
+  propuesta: string;
+  textoFoto: string | null;
+  estado: EstadoTicket;
+}
+
+export interface CambiosTicket {
+  fecha?: string | null;
+  origen_fecha?: 'texto' | 'ticket' | null;
+  estado?: EstadoTicket;
+  propuesta?: string;
+  confirmacion_msg_id?: string | null;
+}
+
+const COLUMNAS_TICKET = new Set(['fecha', 'origen_fecha', 'estado', 'propuesta', 'confirmacion_msg_id']);
+
+export interface ArticuloGuardado {
+  descripcion: string;
+  cantidad: string | null;
+  centavos: number;
+  categoria: string;
 }
 
 export function crearRepositorio(db: DatabaseSync) {
@@ -64,6 +142,13 @@ export function crearRepositorio(db: DatabaseSync) {
       return db.prepare('SELECT 1 FROM mensajes_procesados WHERE mensaje_id = ?').get(mensajeId) !== undefined;
     },
 
+    resultadoDe(mensajeId: string): Resultado | null {
+      const fila = db.prepare('SELECT resultado FROM mensajes_procesados WHERE mensaje_id = ?').get(mensajeId) as
+        | { resultado: Resultado }
+        | undefined;
+      return fila?.resultado ?? null;
+    },
+
     marcarProcesado(mensajeId: string, enviadoEn: Date, resultado: Resultado): void {
       db.prepare(
         'INSERT INTO mensajes_procesados (mensaje_id, enviado_en, resultado, procesado_en) VALUES (?, ?, ?, ?)',
@@ -90,6 +175,80 @@ export function crearRepositorio(db: DatabaseSync) {
       const valor = repo.leerEstado('primer_arranque');
       if (!valor) throw new Error('La base no tiene primer_arranque; ¿se migró?');
       return new Date(valor);
+    },
+
+    // --- Configuración, categorías y espera (002) ---
+
+    categorias(tipo: Tipo, opciones: { soloActivas?: boolean } = {}): Categoria[] {
+      const filas = db
+        .prepare(
+          `SELECT nombre, emoji, activa FROM categorias
+           WHERE tipo = ? AND (? = 0 OR activa = 1) ORDER BY activa DESC, orden`,
+        )
+        .all(tipo, opciones.soloActivas ? 1 : 0) as { nombre: string; emoji: string; activa: number }[];
+      return filas.map((f) => ({ nombre: f.nombre, emoji: f.emoji, activa: f.activa === 1 }));
+    },
+
+    /** Emoji de una categoría (activa o no); el genérico si no existe. */
+    emojiDeCategoria(nombre: string, tipo: Tipo): string {
+      const fila = db.prepare('SELECT emoji FROM categorias WHERE tipo = ? AND nombre = ?').get(tipo, nombre) as
+        | { emoji: string }
+        | undefined;
+      return fila?.emoji ?? '🏷️';
+    },
+
+    /**
+     * Deja activas exactamente `nombres` (en ese orden) para el tipo: desactiva las demás, reactiva
+     * las que ya existían e inserta las nuevas. Nunca borra filas (FR-006b). Devuelve las activas de
+     * antes, para mostrar "antes → ahora".
+     */
+    guardarCategorias(tipo: Tipo, nombres: readonly string[]): string[] {
+      const anteriores = repo.categorias(tipo, { soloActivas: true }).map((c) => c.nombre);
+      db.prepare('UPDATE categorias SET activa = 0 WHERE tipo = ?').run(tipo);
+      const reactivar = db.prepare('UPDATE categorias SET activa = 1, orden = ? WHERE tipo = ? AND nombre = ?');
+      const insertar = db.prepare('INSERT INTO categorias (tipo, nombre, emoji, activa, orden) VALUES (?, ?, ?, 1, ?)');
+      nombres.forEach((nombre, orden) => {
+        if (reactivar.run(orden, tipo, nombre).changes === 0) insertar.run(tipo, nombre, emojiPredeterminado(nombre, tipo), orden);
+      });
+      return anteriores;
+    },
+
+    umbralCentavos(): number {
+      return Number(repo.leerEstado('umbral_centavos') ?? 5_000_000);
+    },
+
+    fijarUmbral(centavos: number): void {
+      db.prepare(`INSERT INTO estado (clave, valor) VALUES ('umbral_centavos', ?)
+                  ON CONFLICT (clave) DO UPDATE SET valor = excluded.valor`).run(String(centavos));
+    },
+
+    estadoConfiguracion(): EstadoConfiguracion {
+      return (repo.leerEstado('configuracion') ?? 'pendiente') as EstadoConfiguracion;
+    },
+
+    fijarEstadoConfiguracion(valor: EstadoConfiguracion): void {
+      db.prepare(`INSERT INTO estado (clave, valor) VALUES ('configuracion', ?)
+                  ON CONFLICT (clave) DO UPDATE SET valor = excluded.valor`).run(valor);
+    },
+
+    espera(): Espera | null {
+      const fila = db.prepare('SELECT tipo, referencia FROM espera WHERE id = 1').get() as Espera | undefined;
+      return fila ? { tipo: fila.tipo, referencia: fila.referencia } : null;
+    },
+
+    /** Crea la espera activa. Si ya había una, la reemplaza y la devuelve (research R7). */
+    crearEspera(tipo: TipoEspera, referencia: string | null): Espera | null {
+      const anterior = repo.espera();
+      db.prepare(
+        `INSERT INTO espera (id, tipo, referencia, creado_en) VALUES (1, ?, ?, ?)
+         ON CONFLICT (id) DO UPDATE SET tipo = excluded.tipo, referencia = excluded.referencia,
+           creado_en = excluded.creado_en`,
+      ).run(tipo, referencia, ahora());
+      return anterior;
+    },
+
+    cancelarEspera(): void {
+      db.prepare('DELETE FROM espera WHERE id = 1').run();
     },
 
     // --- Consultas (US2) ---
@@ -187,6 +346,84 @@ export function crearRepositorio(db: DatabaseSync) {
         `INSERT INTO cambios (movimiento_id, accion, valor_anterior, valor_nuevo, mensaje_id, creado_en)
          VALUES (?, 'borrar', 'vigente', 'borrado', ?, ?)`,
       ).run(id, mensajeId, marca);
+    },
+
+    // --- Tickets (002, US3) ---
+
+    crearTicket(t: NuevoTicket): number {
+      const marca = ahora();
+      const r = db
+        .prepare(
+          `INSERT INTO tickets (mensaje_origen_id, comercio, fecha, origen_fecha, total_centavos, propuesta,
+             texto_foto, estado, creado_en, actualizado_en)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(t.mensajeOrigenId, t.comercio, t.fecha, t.origenFecha, t.totalCentavos, t.propuesta, t.textoFoto, t.estado, marca, marca);
+      return Number(r.lastInsertRowid);
+    },
+
+    ticket(id: number): Ticket | null {
+      return (db.prepare('SELECT * FROM tickets WHERE id = ?').get(id) as unknown as Ticket | undefined) ?? null;
+    },
+
+    ticketPorConfirmacion(confirmacionMsgId: string): Ticket | null {
+      const fila = db.prepare('SELECT * FROM tickets WHERE confirmacion_msg_id = ?').get(confirmacionMsgId);
+      return (fila as unknown as Ticket | undefined) ?? null;
+    },
+
+    actualizarTicket(id: number, cambios: CambiosTicket): void {
+      const columnas = Object.keys(cambios).filter((c) => COLUMNAS_TICKET.has(c));
+      if (columnas.length === 0) return;
+      // Las columnas vienen de una lista cerrada, nunca de texto del usuario.
+      const asignaciones = [...columnas.map((c) => `${c} = ?`), 'actualizado_en = ?'].join(', ');
+      const valores = columnas.map((c) => cambios[c as keyof CambiosTicket] ?? null);
+      db.prepare(`UPDATE tickets SET ${asignaciones} WHERE id = ?`).run(...valores, ahora(), id);
+    },
+
+    /** Inserta los artículos confirmados de un ticket como movimientos vigentes (FR-019). */
+    guardarArticulosTicket(ticket: Ticket, articulos: readonly ArticuloGuardado[]): number[] {
+      if (!ticket.fecha) throw new Error('El ticket no tiene fecha');
+      const insertar = db.prepare(
+        `INSERT INTO movimientos (tipo, monto_centavos, categoria, fecha, texto_original, mensaje_origen_id,
+           indice_en_mensaje, estado, origen, descripcion, cantidad, ticket_id, creado_en, actualizado_en)
+         VALUES ('gasto', ?, ?, ?, ?, ?, ?, 'vigente', 'imagen', ?, ?, ?, ?, ?)`,
+      );
+      const marca = ahora();
+      const texto = ticket.texto_foto ?? '[ticket]';
+      return articulos.map((a, indice) => {
+        const r = insertar.run(a.centavos, a.categoria, ticket.fecha, texto, ticket.mensaje_origen_id, indice,
+          a.descripcion, a.cantidad, ticket.id, marca, marca);
+        return Number(r.lastInsertRowid);
+      });
+    },
+
+    vigentesDeTicket(ticketId: number): Movimiento[] {
+      return db
+        .prepare(`SELECT * FROM movimientos WHERE ticket_id = ? AND estado = 'vigente' ORDER BY id`)
+        .all(ticketId) as unknown as Movimiento[];
+    },
+
+    /** FR-020a: borrado lógico de los artículos vigentes de un ticket, con un cambio por artículo. */
+    borrarTicket(ticketId: number, mensajeId: string): { cantidad: number; centavos: number } {
+      const movimientos = repo.vigentesDeTicket(ticketId);
+      const marca = ahora();
+      const actualizar = db.prepare(`UPDATE movimientos SET estado = 'borrado', actualizado_en = ? WHERE id = ? AND estado = 'vigente'`);
+      const registrar = db.prepare(
+        `INSERT INTO cambios (movimiento_id, accion, valor_anterior, valor_nuevo, mensaje_id, creado_en)
+         VALUES (?, 'borrar_ticket', 'vigente', 'borrado', ?, ?)`,
+      );
+      for (const m of movimientos) {
+        actualizar.run(marca, m.id);
+        registrar.run(m.id, mensajeId, marca);
+      }
+      repo.actualizarTicket(ticketId, { estado: 'borrado' });
+      return { cantidad: movimientos.length, centavos: movimientos.reduce((s, m) => s + m.monto_centavos, 0) };
+    },
+
+    movimientosVigentesDeFecha(fecha: string): Movimiento[] {
+      return db
+        .prepare(`SELECT * FROM movimientos WHERE estado = 'vigente' AND fecha = ? ORDER BY id`)
+        .all(fecha) as unknown as Movimiento[];
     },
 
     // --- Movimientos (US1) ---

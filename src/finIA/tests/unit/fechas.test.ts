@@ -61,3 +61,43 @@ test('nombreMes en español', () => {
   assert.equal(nombreMes('2026-01'), 'enero');
   assert.equal(nombreMes('2026-09'), 'septiembre');
 });
+
+// --- 002: fecha escrita por el dueño (FR-018c, research R5) ---
+import { leerFechaEscrita } from '../../src/dominio/fechas.ts';
+
+test('leerFechaEscrita reconoce hoy, ayer, antier, dd/mm y dd/mm/aaaa', () => {
+  assert.equal(leerFechaEscrita('súper de ayer', hoy), '2026-10-12');
+  assert.equal(leerFechaEscrita('fue antier', hoy), '2026-10-11');
+  assert.equal(leerFechaEscrita('Hoy', hoy), '2026-10-13');
+  assert.equal(leerFechaEscrita('AYER.', hoy), '2026-10-12');
+  assert.equal(leerFechaEscrita('12/10', hoy), '2026-10-12');
+  assert.equal(leerFechaEscrita('compra del 5/9/2026', hoy), '2026-09-05');
+});
+
+test('leerFechaEscrita: sin fecha o fecha imposible → null', () => {
+  assert.equal(leerFechaEscrita('súper', hoy), null);
+  assert.equal(leerFechaEscrita('31/02/2026', hoy), null);
+  assert.equal(leerFechaEscrita('2 x 28.50', hoy), null);
+});
+
+test('leerFechaEscrita: dd/mm/aaaa tiene prioridad sobre las palabras', () => {
+  assert.equal(leerFechaEscrita('ayer no, fue el 01/10/2026', hoy), '2026-10-01');
+});
+
+test('leerFechaEscrita entiende el mes con nombre ("9 de octubre", "9 oct", "9 de octubre de 2025")', () => {
+  assert.equal(leerFechaEscrita('9 de octubre', hoy), '2026-10-09');
+  assert.equal(leerFechaEscrita('fue el 9 de Octubre.', hoy), '2026-10-09');
+  assert.equal(leerFechaEscrita('9 oct', hoy), '2026-10-09');
+  assert.equal(leerFechaEscrita('1 de febrero', hoy), '2026-02-01');
+  assert.equal(leerFechaEscrita('3 de sept', hoy), '2026-09-03');
+  assert.equal(leerFechaEscrita('9 de octubre de 2025', hoy), '2025-10-09');
+  assert.equal(leerFechaEscrita('9 de octubre del 2025', hoy), '2025-10-09');
+  assert.equal(leerFechaEscrita('31 de febrero', hoy), null);
+  assert.equal(leerFechaEscrita('9 de marzipan', hoy), null);
+});
+
+test('una fecha sin año que caería en el futuro es del año anterior', () => {
+  assert.equal(leerFechaEscrita('25 de diciembre', hoy), '2025-12-25');
+  assert.equal(leerFechaEscrita('12/12', hoy), '2025-12-12');
+  assert.equal(leerFechaEscrita('13/10', hoy), '2026-10-13');
+});

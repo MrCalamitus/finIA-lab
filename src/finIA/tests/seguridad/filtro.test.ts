@@ -45,7 +45,7 @@ test('ignora mensajes sin texto (imagen, sticker, audio)', () => {
 });
 
 test('FR-014: ignora las respuestas del propio asistente', () => {
-  assert.equal(clasificar(mensaje({ id: `${GRUPO}:BOT1`, texto: 'Registrado: gasto de $180.00 · Comida · hoy' }), GRUPO, esEnviado), 'ignorar');
+  assert.equal(clasificar(mensaje({ id: `${GRUPO}:BOT1`, texto: '✅ Registrado: gasto de *$180.00* · 🌮 Comida · hoy' }), GRUPO, esEnviado), 'ignorar');
 });
 
 test('marca como muy_largo un texto de más de 500 caracteres', () => {
@@ -79,3 +79,20 @@ for (const [nombre, valor] of Object.entries(malformados)) {
     assert.equal(validarMensajeEntrante(valor), null);
   });
 }
+
+// --- 002 (FR-016): las imágenes siguen las mismas reglas de origen ---
+
+const FOTO = { mime: 'image/jpeg' as const, bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]) };
+
+test('FR-016: se acepta una foto del dueño en el grupo, con o sin texto', () => {
+  assert.equal(clasificar(mensaje({ texto: null, imagen: FOTO }), GRUPO, esEnviado), 'procesar');
+  assert.equal(clasificar(mensaje({ texto: 'súper', imagen: FOTO }), GRUPO, esEnviado), 'procesar');
+  assert.equal(clasificar(mensaje({ texto: null, imagen: null, imagenRechazada: true }), GRUPO, esEnviado), 'procesar');
+});
+
+test('FR-016: se ignora una foto de otro grupo, de otra persona o enviada por el asistente', () => {
+  const otro = '120363999999999999@g.us';
+  assert.equal(clasificar(mensaje({ remoteJid: otro, id: `${otro}:F`, texto: null, imagen: FOTO }), GRUPO, esEnviado), 'ignorar');
+  assert.equal(clasificar(mensaje({ fromMe: false, texto: null, imagen: FOTO }), GRUPO, esEnviado), 'ignorar');
+  assert.equal(clasificar(mensaje({ id: `${GRUPO}:BOT1`, texto: null, imagen: FOTO }), GRUPO, esEnviado), 'ignorar');
+});

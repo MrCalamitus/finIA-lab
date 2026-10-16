@@ -76,3 +76,22 @@ for (const url of urlsExternas) {
     assert.throws(() => cargarConfig({ ...minimo, FINIA_OLLAMA_URL: url }), /FINIA_OLLAMA_URL/);
   });
 }
+
+// --- 002: modelo de visión ---
+
+test('FINIA_OLLAMA_MODEL_VISION ausente o vacío usa el modelo de texto', () => {
+  assert.equal(cargarConfig(minimo).ollamaModeloVision, 'modelo-de-prueba');
+  assert.equal(cargarConfig({ ...minimo, FINIA_OLLAMA_MODEL_VISION: '' }).ollamaModeloVision, 'modelo-de-prueba');
+  assert.equal(cargarConfig({ ...minimo, FINIA_OLLAMA_MODEL_VISION: 'modelo-vision' }).ollamaModeloVision, 'modelo-vision');
+});
+
+test('FINIA_VISION_TIMEOUT_MS por defecto 60000 y dentro de 1000–300000', () => {
+  assert.equal(cargarConfig(minimo).visionTimeoutMs, 60000);
+  assert.equal(cargarConfig({ ...minimo, FINIA_VISION_TIMEOUT_MS: '90000' }).visionTimeoutMs, 90000);
+  for (const valor of ['999', '300001', 'abc']) {
+    assert.throws(
+      () => cargarConfig({ ...minimo, FINIA_VISION_TIMEOUT_MS: valor }),
+      (error: Error) => /FINIA_VISION_TIMEOUT_MS/.test(error.message) && !error.message.includes(valor),
+    );
+  }
+});

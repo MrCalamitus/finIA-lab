@@ -1,6 +1,6 @@
 // US2: totales por periodo y categoría (FR-008, FR-009). Solo lee; no escribe movimientos.
 import { rangoPeriodo } from '../dominio/fechas.ts';
-import { consultaSinDatos, etiquetaPeriodo, lineaConsulta, TEXTOS, type LineaConsulta } from './respuestas.ts';
+import { consulta as textoConsulta, consultaSinDatos, etiquetaPeriodo, TEXTOS, type LineaConsulta } from './respuestas.ts';
 import { rechazo, type FuncionAccion } from './tipos.ts';
 
 export const consultar: FuncionAccion = ({ repo, interpretacion, ahora }) => {
@@ -15,7 +15,7 @@ export const consultar: FuncionAccion = ({ repo, interpretacion, ahora }) => {
   const lineas: LineaConsulta[] = tipos.map((tipo) => ({ tipo, ...repo.totales({ tipo, ...rango, categoria }) }));
   const respuesta = lineas.every((l) => l.cantidad === 0)
     ? consultaSinDatos(consulta.tipo, etiqueta, categoria)
-    : lineas.map((l) => lineaConsulta(l, etiqueta, categoria)).join('\n');
+    : textoConsulta(lineas, etiqueta, categoria);
 
   return { resultado: 'consulta', respuesta };
 };

@@ -24,7 +24,7 @@ test('escenario 1: total de Comida del mes con número de gastos', async () => {
     { tipo: 'gasto', centavos: 7000, categoria: 'Comida', fecha: '2026-09-30' },
     { tipo: 'ingreso', centavos: 1250000, categoria: 'Salario', fecha: '2026-10-01' },
   ]);
-  assert.deepEqual(await e.escribir(texto), ['Comida en octubre: $2,340.00 (14 gastos)']);
+  assert.deepEqual(await e.escribir(texto), ['📊 *Comida en octubre*\n*$2,340.00* · 14 gastos']);
   assert.deepEqual(e.filas('SELECT resultado FROM mensajes_procesados WHERE mensaje_id LIKE ?', '%usr%'), [
     { resultado: 'consulta' },
   ]);
@@ -39,14 +39,14 @@ test('escenario 2: gastos de la semana (lunes a domingo) sin incluir ingresos', 
     { tipo: 'gasto', centavos: 30050, categoria: 'Transporte', fecha: '2026-10-13' },
     { tipo: 'ingreso', centavos: 999900, categoria: 'Salario', fecha: '2026-10-13' },
   ]);
-  assert.deepEqual(await e.escribir(texto), ['Gastos esta semana: $500.50 (2 gastos)']);
+  assert.deepEqual(await e.escribir(texto), ['📊 *Gastos esta semana*\n*$500.50* · 2 gastos']);
 });
 
 test('escenario 3: periodo sin movimientos responde que no hay, sin cifras', async () => {
   const texto = '¿cuánto llevo gastado este mes en comida?';
   const e = crearEntorno({ programa: { [texto]: consulta('gasto', 'mes', { categoria: 'Comida' }) } });
   e.sembrar([{ tipo: 'gasto', centavos: 7000, categoria: 'Comida', fecha: '2026-09-30' }]);
-  assert.deepEqual(await e.escribir(texto), ['No hay gastos de Comida en octubre.']);
+  assert.deepEqual(await e.escribir(texto), ['📊 No hay gastos de 🌮 Comida en octubre.']);
 });
 
 test('mes concreto y singular', async () => {
@@ -56,14 +56,14 @@ test('mes concreto y singular', async () => {
     { tipo: 'ingreso', centavos: 980000, categoria: 'Salario', fecha: '2026-09-15' },
     { tipo: 'ingreso', centavos: 100, categoria: 'Otros', fecha: '2026-10-01' },
   ]);
-  assert.deepEqual(await e.escribir(texto), ['Ingresos en septiembre: $9,800.00 (1 ingreso)']);
+  assert.deepEqual(await e.escribir(texto), ['📊 *Ingresos en septiembre*\n*$9,800.00* · 1 ingreso']);
 });
 
 test('un mes de otro año lleva el año', async () => {
   const texto = '¿cuánto gasté en diciembre del año pasado?';
   const e = crearEntorno({ programa: { [texto]: consulta('gasto', 'mes_concreto', { mes: '2025-12' }) } });
   e.sembrar([{ tipo: 'gasto', centavos: 100, categoria: 'Otros', fecha: '2025-12-24' }]);
-  assert.deepEqual(await e.escribir(texto), ['Gastos en diciembre de 2025: $1.00 (1 gasto)']);
+  assert.deepEqual(await e.escribir(texto), ['📊 *Gastos en diciembre de 2025*\n*$1.00* · 1 gasto']);
 });
 
 test('hoy', async () => {
@@ -73,7 +73,7 @@ test('hoy', async () => {
     { tipo: 'gasto', centavos: 4550, categoria: 'Comida', fecha: '2026-10-13' },
     { tipo: 'gasto', centavos: 1000, categoria: 'Comida', fecha: '2026-10-12' },
   ]);
-  assert.deepEqual(await e.escribir(texto), ['Gastos hoy: $45.50 (1 gasto)']);
+  assert.deepEqual(await e.escribir(texto), ['📊 *Gastos hoy*\n*$45.50* · 1 gasto']);
 });
 
 test('ingresos y gastos juntos', async () => {
@@ -84,14 +84,14 @@ test('ingresos y gastos juntos', async () => {
     { tipo: 'ingreso', centavos: 1250000, categoria: 'Salario' },
   ]);
   assert.deepEqual(await e.escribir(texto), [
-    'Ingresos en octubre: $12,500.00 (1 ingreso)\nGastos en octubre: $180.00 (1 gasto)',
+    '📊 *Octubre*\n💰 Ingresos: *$12,500.00* · 1 ingreso\n💸 Gastos: *$180.00* · 1 gasto',
   ]);
 });
 
 test('ingresos y gastos juntos sin datos', async () => {
   const texto = '¿cómo voy este mes?';
   const e = crearEntorno({ programa: { [texto]: consulta('ambos', 'mes') } });
-  assert.deepEqual(await e.escribir(texto), ['No hay movimientos en octubre.']);
+  assert.deepEqual(await e.escribir(texto), ['📊 No hay movimientos en octubre.']);
 });
 
 test('pendientes, borrados y descartados no cuentan', async () => {
@@ -105,8 +105,8 @@ test('pendientes, borrados y descartados no cuentan', async () => {
   ]);
   // El pendiente se descarta con el mensaje siguiente (FR-005a) y tampoco cuenta.
   assert.deepEqual(await e.escribir(texto), [
-    'No guardé el gasto de $20.00 porque no lo confirmaste.',
-    'Gastos hoy: $10.00 (1 gasto)',
+    '⚠️ No guardé el gasto de *$20.00* porque no lo confirmaste.',
+    '📊 *Gastos hoy*\n*$10.00* · 1 gasto',
   ]);
 });
 

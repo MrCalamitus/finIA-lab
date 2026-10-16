@@ -15,7 +15,7 @@ test('escenario 2: citando la confirmación, "bórralo" lo borra y deja de conta
     { tipo: 'gasto', centavos: 18000, categoria: 'Comida', confirmacion: CONF1 },
     { tipo: 'gasto', centavos: 1000, categoria: 'Otros' },
   ]);
-  assert.deepEqual(await e.escribir('bórralo', { citadoId: CONF1 }), ['Borrado: gasto de $180.00 · Comida · hoy']);
+  assert.deepEqual(await e.escribir('bórralo', { citadoId: CONF1 }), ['🗑️ Borrado: gasto de *$180.00* · 🌮 Comida · hoy']);
   assert.equal(estado(e, id!), 'borrado');
   assert.deepEqual(total(e), { centavos: 1000, cantidad: 1 });
   assert.deepEqual(e.filas('SELECT accion, valor_anterior, valor_nuevo FROM cambios'), [
@@ -30,7 +30,7 @@ test('"borra el último" borra solo el más reciente', async () => {
     { tipo: 'gasto', centavos: 18000, categoria: 'Comida' },
     { tipo: 'gasto', centavos: 5000, categoria: 'Transporte' },
   ]);
-  assert.deepEqual(await e.escribir('borra el último'), ['Borrado: gasto de $50.00 · Transporte · hoy']);
+  assert.deepEqual(await e.escribir('borra el último'), ['🗑️ Borrado: gasto de *$50.00* · 🚌 Transporte · hoy']);
   assert.equal(estado(e, primero!), 'vigente');
   assert.equal(estado(e, segundo!), 'borrado');
 });
@@ -45,10 +45,10 @@ test('un movimiento borrado no se puede volver a borrar ni corregir', async () =
   e.sembrar([{ tipo: 'gasto', centavos: 18000, categoria: 'Comida', confirmacion: CONF1 }]);
   await e.escribir('bórralo', { citadoId: CONF1 });
   assert.deepEqual(await e.escribir('bórralo', { citadoId: CONF1 }), [
-    'No encontré qué borrar. Cita la confirmación del registro o escribe "borra el último".',
+    '⚠️ No encontré qué borrar. Cita la confirmación del registro o escribe ```borra el último```',
   ]);
   assert.deepEqual(await e.escribir('era 150', { citadoId: CONF1 }), [
-    'No encontré qué corregir. Cita la confirmación del registro o escribe "corrige el último …".',
+    '⚠️ No encontré qué corregir. Cita la confirmación del registro o escribe ```corrige el último …```',
   ]);
   assert.equal(e.filas('SELECT 1 FROM cambios').length, 1);
 });
@@ -56,7 +56,7 @@ test('un movimiento borrado no se puede volver a borrar ni corregir', async () =
 test('sin registros, borrar avisa y no cambia nada', async () => {
   const e = crearEntorno({ programa: { 'borra el último': { accion: 'borrar' } } });
   assert.deepEqual(await e.escribir('borra el último'), [
-    'No encontré qué borrar. Cita la confirmación del registro o escribe "borra el último".',
+    '⚠️ No encontré qué borrar. Cita la confirmación del registro o escribe ```borra el último```',
   ]);
 });
 
@@ -72,6 +72,6 @@ test('flujo completo: registrar, citar la confirmación real y borrar', async ()
   });
   await e.escribir('gasté 180 en tacos');
   const confirmacion = e.idUltimaRespuesta()!;
-  assert.deepEqual(await e.escribir('bórralo', { citadoId: confirmacion }), ['Borrado: gasto de $180.00 · Comida · hoy']);
+  assert.deepEqual(await e.escribir('bórralo', { citadoId: confirmacion }), ['🗑️ Borrado: gasto de *$180.00* · 🌮 Comida · hoy']);
   assert.deepEqual(total(e), { centavos: 0, cantidad: 0 });
 });
