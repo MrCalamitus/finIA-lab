@@ -1,7 +1,5 @@
 # Pre-work (hazlo ANTES del taller)
 
-⏱️ ~45 minutos, con buena conexión. **No lo dejes para el día del taller**: el Wi-Fi del congreso no alcanza para todas las personas que asistirán.
-
 Si algo falla, anota el error exacto y tráelo. Lo resolvemos en los primeros 10 minutos del Bloque 2.
 
 ---
